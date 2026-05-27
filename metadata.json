@@ -1,0 +1,6 @@
+{
+  "name": "Skyline",
+  "description": "A elegant mobile weather app displaying a task-like hourly schedule with animating key events, sunset markers, and wind shifts.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

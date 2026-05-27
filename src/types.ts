@@ -1,0 +1,75 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+export interface WeatherTimelineEvent {
+  id: string;
+  time: Date;             // Exact date code of event
+  hourLabel: string;      // E.g., "08:00" or "02:00 PM"
+  type: 'now' | 'sunrise' | 'sunset' | 'moonrise' | 'moonset' | 'peak_temp' | 'wind_shift' | 'hourly_status';
+  title: string;
+  description: string;
+  iconName: string;       // Lucide icon key
+  temp?: number;          // Temperature if applicable
+  tempMax?: number;       // Peak temperature max
+  windSpeed?: number;     // Wind speed (m/s)
+  windDeg?: number;       // Wind degrees (for direction arrow)
+  windFromSpeed?: number; // Previous wind speed (m/s)
+  windFromDeg?: number;   // Previous wind degrees (for direction arrow)
+  windGust?: number;
+  precipProb?: number;    // Precipitation probability (0-100)
+  precipAccum?: number;   // Precipitation accumulation in mm
+  humidity?: number;
+  isSpecial?: boolean;    // Custom animations target this
+  colorTheme: string;     // Color string (border/bg accents)
+}
+
+export interface DailyForecast {
+  date: Date;             // Date reference
+  dayName: string;        // E.g., "Monday"
+  shortDate: string;      // E.g., "May 27"
+  tempMin: number;
+  tempMax: number;
+  iconName: string;       // Lucide icon
+  description: string;
+  precipProb: number;     // Probability of precipitation (0-100)
+  precipAccum: number;    // Precipitation accumulation in mm
+  windSpeed: number;
+  windDeg: number;
+  timelineEvents: WeatherTimelineEvent[];
+}
+
+export interface WeatherData {
+  city: string;
+  country: string;
+  lat: number;
+  lon: number;
+  current: {
+    temp: number;
+    description: string;
+    iconName: string;
+    humidity: number;
+    windSpeed: number;
+    windDeg: number;
+    precipProb: number;
+    precipAccum: number;  // Precipitation accumulation in mm
+    feelsLike: number;
+    sunriseTime: Date;
+    sunsetTime: Date;
+    moonriseTime?: Date;
+    moonsetTime?: Date;
+  };
+  daily: DailyForecast[];
+}
+
+export interface UserSettings {
+  apiKey: string;
+  city: string;
+  tempUnit: 'C' | 'F';
+  windSpeedUnit: 'm/s' | 'kph' | 'mph' | 'knots';
+  clockFormat: '12h' | '24h';
+  showSunriseSunset: boolean;
+  showMoonriseMoonset: boolean;
+  units: 'metric' | 'imperial'; // Kept for general fallback/compatibility
+}
