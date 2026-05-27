@@ -6,8 +6,9 @@
 import React, { useState, useEffect } from 'react';
 import { WeatherTimelineEvent, UserSettings } from '../types';
 import { WeatherIcon } from './WeatherIcon';
-import { Flame, Wind, Sunrise, Sunset, Navigation } from 'lucide-react';
+import { Flame, Sunrise, Sunset } from 'lucide-react';
 import { convertTemp, convertWindSpeed } from '../utils/unitConverter';
+import { WindDirectionArrow } from './WindDirectionArrow';
 
 const Odometer: React.FC<{ value: number; instant?: boolean }> = ({ value, instant }) => {
   const [displayValue, setDisplayValue] = useState(value);
@@ -82,12 +83,12 @@ const WindShiftLoop: React.FC<WindShiftLoopProps> = ({ event, settings, iconColo
 
   return (
     <div className="flex items-center gap-2 flex-wrap text-[10px] select-none font-bold">
-      <Navigation 
-        size={12} 
-        className={`${iconColorClass} ${
-          isTransitioning ? 'transition-transform duration-[1200ms] ease-out' : 'transition-none'
-        }`} 
-        style={{ transform: `rotate(${currentDeg - 45}deg)` }} 
+      <WindDirectionArrow
+        deg={currentDeg}
+        size={12}
+        className={iconColorClass}
+        transition={isTransitioning}
+        durationMs={1200}
       />
       <span className="uppercase tracking-wide text-slate-300">Wind Shift:</span>
 
@@ -222,12 +223,11 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({ event, s
           <div className="w-20 shrink-0 flex items-center justify-end gap-1.5 font-mono text-[10px] text-slate-500 h-full">
             {event.windSpeed !== undefined && (
               <>
-                <span 
-                  className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-[10px] font-bold"
-                  style={{ transform: `rotate(${event.windDeg}deg)` }}
-                  title={`Wind Degrees: ${event.windDeg}°`}
+                <span
+                  className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0"
+                  title={`Wind direction: ${event.windDeg}°`}
                 >
-                  ↑
+                  <WindDirectionArrow deg={event.windDeg ?? 0} size={10} />
                 </span>
                 <span className="font-semibold text-slate-700 dark:text-slate-300">
                   {convertWindSpeed(event.windSpeed, settings.windSpeedUnit)} {settings.windSpeedUnit}

@@ -61,11 +61,38 @@ export interface WeatherData {
     moonsetTime?: Date;
   };
   daily: DailyForecast[];
+  resolvedProvider?: WeatherProvider;
+  /** Calendar days shown after trimming to provider capacity. */
+  forecastDayCount?: number;
+  /** Days with enough observed (non-interpolated) hourly data from the chosen provider. */
+  realForecastDayCount?: number;
+}
+
+export type WeatherProvider = 'auto' | 'openweather' | 'meteoswiss' | 'nws' | 'arpae';
+
+export interface SavedLocation {
+  id: string;
+  label: string;
+  lat: number;
+  lon: number;
+  country?: string;
+  state?: string;
+}
+
+export type DataSource = 'live' | 'cached' | 'simulated';
+
+export interface WeatherFetchResult {
+  data: WeatherData;
+  source: DataSource;
+  resolvedProvider?: WeatherProvider;
+  warnings: string[];
 }
 
 export interface UserSettings {
   apiKey: string;
   city: string;
+  activeLocation?: SavedLocation;
+  provider: WeatherProvider;
   tempUnit: 'C' | 'F';
   windSpeedUnit: 'm/s' | 'kph' | 'mph' | 'knots';
   clockFormat: '12h' | '24h';

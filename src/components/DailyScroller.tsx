@@ -24,20 +24,22 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const scrollToTimelineDay = (idx: number) => {
+    const scrollContainer = document.getElementById('weather-timeline-container');
+    const element = document.getElementById(`timeline-day-anchor-${idx}`);
+    if (!scrollContainer || !element) return;
+
+    const containerTop = scrollContainer.getBoundingClientRect().top;
+    const elementTop = element.getBoundingClientRect().top;
+    scrollContainer.scrollTo({
+      top: elementTop - containerTop + scrollContainer.scrollTop,
+      behavior: 'smooth',
+    });
+  };
+
   const handleDayClick = (idx: number) => {
     onSelectDay(idx);
-    
-    // Smooth scrolling to the corresponding timeline selector in the hourly section
-    const element = document.getElementById(`timeline-day-anchor-${idx}`);
-    if (element) {
-      setTimeout(() => {
-        element.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-          inline: 'nearest'
-        });
-      }, 50);
-    }
+    setTimeout(() => scrollToTimelineDay(idx), 50);
   };
 
   // Auto-scroll the active horizontal pill into view if needed

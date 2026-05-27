@@ -8,6 +8,7 @@ import { DailyForecast, UserSettings, WeatherTimelineEvent } from '../types';
 import { TimelineMarkerCard } from './TimelineMarkerCard';
 import { WeatherIcon } from './WeatherIcon';
 import { convertTemp, convertWindSpeed } from '../utils/unitConverter';
+import { WindDirectionArrow } from './WindDirectionArrow';
 
 interface WeatherTimelineProps {
   daily: DailyForecast[];
@@ -78,12 +79,11 @@ export const MergedHourlyCard: React.FC<{ events: WeatherTimelineEvent[]; settin
                 {/* Middle part: Wind Speed column */}
                 <div className="relative w-20 h-full flex items-center justify-end shrink-0">
                   <div className="flex items-center gap-1.5 font-mono text-[10px] text-slate-500 z-10 bg-white dark:bg-slate-900 px-1 rounded">
-                    <span 
-                      className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-202 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-[10px] font-bold"
-                      style={{ transform: `rotate(${evt.windDeg}deg)` }}
-                      title={`Wind Degrees: ${evt.windDeg}°`}
+                    <span
+                      className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-202 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0"
+                      title={`Wind direction: ${evt.windDeg}°`}
                     >
-                      ↑
+                      <WindDirectionArrow deg={evt.windDeg ?? 0} size={10} />
                     </span>
                     <span className="font-semibold text-slate-700 dark:text-slate-300">
                       {convertWindSpeed(evt.windSpeed, settings.windSpeedUnit)} {settings.windSpeedUnit}
@@ -163,7 +163,7 @@ export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
   };
 
   return (
-    <div id="weather-timeline-container" className="flex-1 bg-white dark:bg-slate-950 px-4 py-5 pb-24 rounded-t-3xl shadow-inner relative z-10">
+    <div id="weather-timeline-container" className="flex-1 min-h-0 overflow-y-auto scrollbar-none bg-white dark:bg-slate-950 px-4 py-5 pb-24 rounded-t-3xl shadow-inner relative z-10">
       
       {/* Main continuous timeline list */}
       <div className="relative">
@@ -250,11 +250,6 @@ export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
             </div>
           );
         })}
-      </div>
-
-      {/* End state visual footer */}
-      <div className="text-center py-6 text-xs text-slate-400 font-mono border-t border-slate-100 dark:border-slate-800">
-        ✦ End of 7-Day Atmospheric Sequence ✦
       </div>
     </div>
   );

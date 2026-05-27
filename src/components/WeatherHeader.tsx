@@ -3,12 +3,48 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { WeatherData, UserSettings } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { WeatherData, UserSettings, SavedLocation, DataSource } from '../types';
 import { WeatherIcon } from './WeatherIcon';
 import { MapPin, Search, Settings, Wind, Info, RefreshCw, Trash2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { convertTemp, convertWindSpeed, convertPrecipAccum, formatTime } from '../utils/unitConverter';
+import { WindDirectionArrow } from './WindDirectionArrow';
+import { searchLocations, reverseGeocode } from '../utils/weatherFetcher';
+import type { GeocodedLocation } from '../services/geocoding/types';
+import {
+  geocodedToSaved,
+  SAVED_LOCATIONS_V1_KEY,
+  SAVED_LOCATIONS_V2_KEY,
+} from '../utils/savedLocation';
+import { geocodeLocation } from '../services/geocoding/geocodingService';
+
+const DEFAULT_SAVED: SavedLocation[] = [
+  { id: '47.3769,8.5417', label: 'Zurich', lat: 47.3769, lon: 8.5417, country: 'CH' },
+  { id: '51.5074,-0.1278', label: 'London', lat: 51.5074, lon: -0.1278, country: 'GB' },
+  { id: '64.1466,-21.9426', label: 'Reykjavik', lat: 64.1466, lon: -21.9426, country: 'IS' },
+  { id: '23.4162,25.6628', label: 'Sahara', lat: 23.4162, lon: 25.6628, country: 'EG' },
+  { id: '35.6762,139.6503', label: 'Tokyo', lat: 35.6762, lon: 139.6503, country: 'JP' },
+];
+
+function loadSavedLocations(): SavedLocation[] {
+  try {
+    const v2 = localStorage.getItem(SAVED_LOCATIONS_V2_KEY);
+    if (v2) {
+      const parsed = JSON.parse(v2) as SavedLocation[];
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].lat != null) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error('Failed to parse saved locations v2', e);
+  }
+  return DEFAULT_SAVED;
+}
+
+function persistSaved(locations: SavedLocation[]) {
+  localStorage.setItem(SAVED_LOCATIONS_V2_KEY, JSON.stringify(locations));
+}
 
 interface WeatherHeaderProps {
   weatherData: WeatherData;
@@ -17,8 +53,10 @@ interface WeatherHeaderProps {
   isLoading: boolean;
   onRefresh: () => void;
   errorMsg: string | null;
+  fetchWarnings?: string[];
   onDismissError?: () => void;
-  useLiveAPI: boolean;
+  onDismissWarnings?: () => void;
+  dataSource: DataSource;
   onSelectNow?: () => void;
 }
 
@@ -29,31 +67,22 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
   isLoading,
   onRefresh,
   errorMsg,
+  fetchWarnings = [],
   onDismissError,
-  useLiveAPI,
-  onSelectNow
+  onDismissWarnings,
+  dataSource,
+  onSelectNow,
 }) => {
   const [searchInput, setSearchInput] = useState('');
   const [apiKeyInput, setApiKeyInput] = useState(settings.apiKey);
   const [showSettings, setShowSettings] = useState(false);
   const [showLocationSelector, setShowLocationSelector] = useState(false);
-  
-  // Track and storage locations list locally 
-  const [savedLocations, setSavedLocations] = useState<string[]>(() => {
-    const saved = localStorage.getItem('sky_timeline_saved_locations');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      } catch (e) {
-        console.error('Failed to parse saved locations', e);
-      }
-    }
-    return ['Zurich', 'London', 'Reykjavik', 'Sahara', 'Tokyo'];
-  });
-
-  // Dynamic live time update clock
+  const [savedLocations, setSavedLocations] = useState<SavedLocation[]>(loadSavedLocations);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [searchResults, setSearchResults] = useState<GeocodedLocation[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const clockTimer = setInterval(() => {
@@ -62,31 +91,117 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
     return () => clearInterval(clockTimer);
   }, []);
 
-  const selectCity = (cityName: string) => {
-    const cleanName = cityName.trim();
-    if (!cleanName) return;
+  useEffect(() => {
+    const v2 = localStorage.getItem(SAVED_LOCATIONS_V2_KEY);
+    if (v2) return;
+    const v1 = localStorage.getItem(SAVED_LOCATIONS_V1_KEY);
+    if (!v1) return;
+    try {
+      const names = JSON.parse(v1) as string[];
+      if (!Array.isArray(names)) return;
+      void (async () => {
+        const migrated: SavedLocation[] = [];
+        for (const name of names) {
+          try {
+            const g = await geocodeLocation(name, settings.apiKey);
+            migrated.push(geocodedToSaved(g));
+          } catch {
+            migrated.push({
+              id: `pending:${name}`,
+              label: name,
+              lat: 0,
+              lon: 0,
+            });
+          }
+        }
+        if (migrated.length > 0) {
+          setSavedLocations(migrated);
+          persistSaved(migrated);
+        }
+      })();
+    } catch {
+      /* ignore */
+    }
+  }, [settings.apiKey]);
 
-    // Trigger update settings city
-    updateSettings({ city: cleanName });
+  useEffect(() => {
+    const cleanSearch = searchInput.trim();
+    if (cleanSearch.length <= 2) {
+      searchAbortRef.current?.abort();
+      setSearchResults([]);
+      setSearchError(null);
+      setIsSearching(false);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      searchAbortRef.current?.abort();
+      const controller = new AbortController();
+      searchAbortRef.current = controller;
+      setIsSearching(true);
+      setSearchError(null);
+
+      const result = await searchLocations(cleanSearch, settings.apiKey, controller.signal);
+      if (controller.signal.aborted) return;
+
+      if (result.ok) {
+        setSearchResults(result.results);
+        setSearchError(null);
+      } else if (result.ok === false) {
+        setSearchResults([]);
+        setSearchError(result.error);
+      }
+      setIsSearching(false);
+    }, 400);
+
+    return () => {
+      clearTimeout(delayDebounceFn);
+      searchAbortRef.current?.abort();
+    };
+  }, [searchInput, settings.apiKey]);
+
+  const selectLocation = (loc: SavedLocation) => {
+    updateSettings({ activeLocation: loc, city: loc.label });
     setSearchInput('');
+    setSearchResults([]);
+    setSearchError(null);
 
-    // Append to list of saved states if not present
     setSavedLocations((prev) => {
-      const exists = prev.some(it => it.toLowerCase() === cleanName.toLowerCase());
-      if (exists) return prev;
-      const updated = [cleanName, ...prev];
-      localStorage.setItem('sky_timeline_saved_locations', JSON.stringify(updated));
+      const exists = prev.some((it) => it.id === loc.id);
+      const updated = exists ? prev : [loc, ...prev];
+      persistSaved(updated);
       return updated;
     });
 
     setShowLocationSelector(false);
   };
 
-  const handleDeleteSavedLocation = (e: React.MouseEvent, locationToDelete: string) => {
-    e.stopPropagation(); // Stop drawer closure or activation
+  const selectFromGeocoded = (loc: GeocodedLocation) => {
+    selectLocation(geocodedToSaved(loc));
+  };
+
+  const selectCityByName = async (name: string) => {
+    const cleanName = name.trim();
+    if (!cleanName) return;
+    try {
+      const g = await geocodeLocation(cleanName, settings.apiKey);
+      selectLocation(geocodedToSaved(g));
+    } catch (e) {
+      console.error('Geocode failed', e);
+      selectLocation({
+        id: `pending:${cleanName}`,
+        label: cleanName,
+        lat: 0,
+        lon: 0,
+      });
+    }
+  };
+
+  const handleDeleteSavedLocation = (e: React.MouseEvent, locationToDelete: SavedLocation) => {
+    e.stopPropagation();
     setSavedLocations((prev) => {
-      const updated = prev.filter((item) => item.toLowerCase() !== locationToDelete.toLowerCase());
-      localStorage.setItem('sky_timeline_saved_locations', JSON.stringify(updated));
+      const updated = prev.filter((item) => item.id !== locationToDelete.id);
+      persistSaved(updated);
       return updated;
     });
   };
@@ -104,11 +219,30 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
     }
     
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const { latitude, longitude } = position.coords;
-        // Search by GPS coordinate tag - weatherFetcher will dynamically query reverse lookup Geo details
-        const geoQuery = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-        updateSettings({ city: geoQuery });
+        try {
+          const rev = await reverseGeocode(latitude, longitude, settings.apiKey);
+          if (rev) {
+            selectLocation(geocodedToSaved(rev));
+          } else {
+            selectLocation({
+              id: `${latitude.toFixed(4)},${longitude.toFixed(4)}`,
+              label: `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+              lat: latitude,
+              lon: longitude,
+              country: 'GPS',
+            });
+          }
+        } catch {
+          selectLocation({
+            id: `${latitude.toFixed(4)},${longitude.toFixed(4)}`,
+            label: `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+            lat: latitude,
+            lon: longitude,
+            country: 'GPS',
+          });
+        }
         setShowLocationSelector(false);
       },
       (error) => {
@@ -180,48 +314,8 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
             transition={{ duration: 0.25 }}
             className="overflow-hidden bg-slate-800/95 border border-slate-705 p-5 rounded-2xl mb-4 relative z-10 space-y-4"
           >
-            {/* OpenWeather Form */}
-            <form onSubmit={handleSaveApiKey} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <Settings size={14} className="text-emerald-400" />
-                  OpenWeather API Configurations
-                </label>
-                {settings.apiKey && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setApiKeyInput('');
-                      updateSettings({ apiKey: '' });
-                    }}
-                    className="text-[10px] text-red-400 hover:underline"
-                  >
-                    Clear Saved Key
-                  </button>
-                )}
-              </div>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
-                Provide your personal <b>OpenWeather API Key</b> to load live real-time conditions. Leave empty and click any town name below to see our rich simulator engine!
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  placeholder="Paste appid / api key here..."
-                  value={apiKeyInput}
-                  onChange={(e) => setApiKeyInput(e.target.value)}
-                  className="flex-1 text-xs bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-                />
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition duration-150 cursor-pointer"
-                >
-                  Save
-                </button>
-              </div>
-            </form>
-
-            {/* Advanced Settings Area */}
-            <div className="border-t border-slate-700/60 pt-3.5 space-y-4">
+            {/* Display Options */}
+            <div className="space-y-4">
               <span className="text-[10px] font-bold text-slate-300 tracking-wider uppercase block">
                 Display Options
               </span>
@@ -332,9 +426,106 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Advanced Section */}
+            <div className="border-t border-slate-700/60 pt-3.5 space-y-4">
+              <span className="text-[10px] font-bold text-slate-300 tracking-wider uppercase block">
+                Advanced
+              </span>
+
+              {/* Weather Provider Selector */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400 font-medium font-sans">Weather Provider</span>
+                  <select
+                    value={settings.provider}
+                    onChange={(e) => updateSettings({ provider: e.target.value as any })}
+                    className="bg-slate-900 border border-slate-700 rounded-lg text-[11px] font-mono px-2 py-1 text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  >
+                    <option value="auto">Automatic (Regional - Keyless)</option>
+                    <option value="openweather">OpenWeather (Needs Key)</option>
+                    <option value="meteoswiss">MeteoSwiss (Swiss ICON - Keyless)</option>
+                    <option value="nws">NWS (United States - Keyless)</option>
+                    <option value="arpae">Open-Meteo/ARPAE (Italy - Keyless)</option>
+                  </select>
+                </div>
+                <p className="text-[10px] text-slate-405 leading-relaxed italic">
+                  {settings.provider === 'auto' && "Automatically resolves the provider by location: MeteoSwiss in Switzerland, NWS in the United States, and Open-Meteo or OpenWeather elsewhere."}
+                  {settings.provider === 'openweather' && "OpenWeather requires a personal API Key for live weather."}
+                  {settings.provider === 'meteoswiss' && "MeteoSwiss provides keyless, highly accurate weather forecast models for Switzerland & Central Europe."}
+                  {settings.provider === 'nws' && "NWS provides keyless, highly accurate public forecasts across the United States."}
+                  {settings.provider === 'arpae' && "ARPAE (via Open-Meteo) provides keyless, high-resolution regional weather across Italy."}
+                </p>
+              </div>
+
+              {/* OpenWeather Form */}
+              <form onSubmit={handleSaveApiKey} className="space-y-3 pt-1 border-t border-slate-700/40">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                    <Settings size={14} className="text-emerald-400" />
+                    OpenWeather API Configuration
+                  </label>
+                  {settings.apiKey && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setApiKeyInput('');
+                        updateSettings({ apiKey: '' });
+                      }}
+                      className="text-[10px] text-red-400 hover:underline"
+                    >
+                      Clear Saved Key
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-404 leading-relaxed">
+                  Provide your personal <b>OpenWeather API Key</b>. Leave empty to use free keyless regional sources or our generator simulator.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    placeholder="Paste appid / api key here..."
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                    className="flex-1 text-xs bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition duration-150 cursor-pointer"
+                  >
+                    Save
+                  </button>
+                </div>
+              </form>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {fetchWarnings.length > 0 && (
+        <div className="p-3 bg-amber-500/15 border border-amber-500/30 text-amber-100 text-xs rounded-xl mb-4 relative z-10 flex items-start justify-between gap-2 overflow-hidden shadow-sm">
+          <div className="flex items-start gap-2 min-w-0">
+            <Info size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              {fetchWarnings.map((w, i) => (
+                <p key={i} className="leading-tight">
+                  {w}
+                </p>
+              ))}
+            </div>
+          </div>
+          {onDismissWarnings && (
+            <button
+              onClick={onDismissWarnings}
+              type="button"
+              className="p-1 hover:bg-white/10 rounded-lg text-slate-300 hover:text-white transition cursor-pointer flex-shrink-0"
+              title="Dismiss warning message"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Error Messaging Banner */}
       {errorMsg && (
@@ -394,7 +585,17 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
             {/* Weather status + Live client local date and clock */}
             <div className="text-xs text-slate-300 flex flex-col gap-1">
               <span className="capitalize text-slate-350 min-h-[16px] font-medium">
-                {current.description} • {useLiveAPI ? 'OpenWeather Live' : 'Simulated Sky'}
+                {current.description} • {(() => {
+                  if (dataSource === 'simulated') return 'Simulated Sky';
+                  if (dataSource === 'cached') return 'Cached forecast';
+                  const rp = weatherData.resolvedProvider;
+                  const label =
+                    rp === 'meteoswiss' ? 'MeteoSwiss Live' :
+                    rp === 'nws' ? 'NWS Live' :
+                    rp === 'arpae' ? 'Open-Meteo Live' :
+                    rp === 'openweather' ? 'OpenWeather Live' : 'Live';
+                  return settings.provider === 'auto' ? `${label} (Auto)` : label;
+                })()}
               </span>
               <span className="font-mono text-[11px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded w-fit tracking-wide shadow-sm">
                 {formattedDate} • {formattedTime}
@@ -440,13 +641,11 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
               </span>
               
               <div className="flex items-center gap-1.5">
-                {/* Visual arrow indicator: rotates dynamically based on wind degrees */}
-                <span 
-                  className="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-bold font-sans text-xs transition-all duration-300 shadow-sm shrink-0"
-                  style={{ transform: `rotate(${current.windDeg}deg)` }}
-                  title={`Wind Degrees: ${current.windDeg}°`}
+                <span
+                  className="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center transition-all duration-300 shadow-sm shrink-0"
+                  title={`Wind direction: ${current.windDeg}°`}
                 >
-                  ↑
+                  <WindDirectionArrow deg={current.windDeg} size={11} className="text-emerald-400" transition />
                 </span>
                 
                 <span className="font-bold text-slate-200 text-xs truncate">
@@ -486,14 +685,14 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
             </div>
 
             {/* Search Box Inputs */}
-            <form 
+            <form
               onSubmit={(e) => {
                 e.preventDefault();
                 if (searchInput.trim()) {
-                  selectCity(searchInput);
+                  void selectCityByName(searchInput);
                 }
-              }} 
-              className="mb-4 flex gap-1.5 shrink-0"
+              }}
+              className="mb-2 flex gap-1.5 shrink-0"
             >
               <div className="relative flex-1">
                 <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -515,10 +714,58 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
               </button>
             </form>
 
-            {/* Fast Access List */}
+            {searchInput.trim().length > 2 && (
+              <div className="mb-3 shrink-0 max-h-40 overflow-y-auto scrollbar-none space-y-1 border border-slate-800 rounded-xl p-1.5 bg-slate-900/60">
+                <span className="text-[10px] text-slate-500 font-mono tracking-wider uppercase px-2 block mb-1">
+                  Matching locations
+                </span>
+                {isSearching && searchResults.length === 0 && !searchError ? (
+                  <div className="text-center py-4">
+                    <RefreshCw size={18} className="text-emerald-500 animate-spin mx-auto mb-1" />
+                    <p className="text-[10px] text-slate-500 font-mono">Searching...</p>
+                  </div>
+                ) : searchError ? (
+                  <div className="text-center py-3 px-2">
+                    <p className="text-xs text-red-400 font-medium">{searchError}</p>
+                  </div>
+                ) : searchResults.length === 0 ? (
+                  <div className="text-center py-3 px-2">
+                    <p className="text-xs text-slate-500">No matches found.</p>
+                  </div>
+                ) : (
+                  searchResults.map((loc, idx) => {
+                    const saved = geocodedToSaved(loc);
+                    const isCurrent = settings.activeLocation?.id === saved.id;
+                    return (
+                      <div
+                        key={`${loc.lat}-${loc.lon}-${idx}`}
+                        onClick={() => selectFromGeocoded(loc)}
+                        className={`group flex items-center justify-between p-2.5 rounded-xl cursor-pointer border transition-all duration-150 ${
+                          isCurrent
+                            ? 'bg-emerald-500/15 border-emerald-500/40'
+                            : 'bg-slate-900/40 border-transparent hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <MapPin size={13} className="text-slate-400 shrink-0" />
+                          <div className="text-left min-w-0">
+                            <span className="text-xs font-bold text-white block truncate">{loc.name}</span>
+                            <span className="text-[10px] text-slate-400 block truncate">
+                              {loc.state ? `${loc.state}, ` : ''}
+                              {loc.country}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+
             <div className="flex-1 flex flex-col min-h-0">
               <span className="text-[10px] text-slate-500 font-mono tracking-wider uppercase mb-2">
-                Saved Locations
+                Saved locations
               </span>
 
               <div className="flex-1 overflow-y-auto scrollbar-none pr-0.5 space-y-1.5">
@@ -529,28 +776,28 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
                   </div>
                 ) : (
                   savedLocations.map((loc) => {
-                    const isCurrent = weatherData.city.toLowerCase().trim() === loc.toLowerCase().trim();
+                    const isCurrent = settings.activeLocation?.id === loc.id;
                     return (
                       <div
-                        key={loc}
-                        onClick={() => selectCity(loc)}
+                        key={loc.id}
+                        onClick={() => selectLocation(loc)}
                         className={`group flex items-center justify-between p-3 rounded-2xl cursor-pointer border transition-all duration-150 ${
                           isCurrent
                             ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
                             : 'bg-slate-900/40 border-slate-900 hover:border-slate-800 text-slate-300 hover:text-white'
                         }`}
                       >
-                        <span className="text-xs font-bold capitalize select-none">{loc}</span>
-                        <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold capitalize select-none truncate pr-2">{loc.label}</span>
+                        <div className="flex items-center gap-2 shrink-0">
                           {isCurrent && (
-                            <span className="text-[8px] bg-emerald-500/20 text-emerald-400 font-mono font-black px-1.5 py-0.5 rounded leading-none shrink-0">
+                            <span className="text-[8px] bg-emerald-500/20 text-emerald-400 font-mono font-black px-1.5 py-0.5 rounded leading-none">
                               ACTIVE
                             </span>
                           )}
                           <button
                             onClick={(e) => handleDeleteSavedLocation(e, loc)}
-                            className="p-1 hover:bg-red-500/20 text-slate-500 hover:text-red-400 rounded-lg transition duration-150 cursor-pointer shrink-0"
-                            title={`Remove ${loc} from list`}
+                            className="p-1 hover:bg-red-500/20 text-slate-500 hover:text-red-400 rounded-lg transition duration-150 cursor-pointer"
+                            title={`Remove ${loc.label} from list`}
                           >
                             <Trash2 size={13} />
                           </button>
