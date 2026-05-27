@@ -224,7 +224,7 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({ event, s
             {event.windSpeed !== undefined && (
               <>
                 <WindDirectionArrow
-                  deg={event.windDeg ?? 0}
+                  deg={(event.windSpeed ?? 0) <= 0 ? 0 : (event.windDeg ?? 0)}
                   size={10}
                   title={`Wind direction: ${event.windDeg}°`}
                 />

@@ -104,7 +104,7 @@ export const MergedHourlyCard: React.FC<{ events: WeatherTimelineEvent[]; settin
                 <div className="relative w-20 h-full flex items-center justify-end shrink-0">
                   <div className="flex items-center gap-1.5 font-mono text-[10px] text-slate-500 z-10 bg-white dark:bg-slate-900 px-1 rounded">
                     <WindDirectionArrow
-                      deg={evt.windDeg ?? 0}
+                      deg={(evt.windSpeed ?? 0) <= 0 ? 0 : (evt.windDeg ?? 0)}
                       size={10}
                       title={`Wind direction: ${evt.windDeg}°`}
                     />

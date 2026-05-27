@@ -87,6 +87,16 @@ export default function App() {
     }, ms);
   };
 
+  const resetToFirstDay = (ms = 300) => {
+    blockScrollSpy(ms);
+    setActiveDayIdx(0);
+    requestAnimationFrame(() => {
+      const scrollContainer = document.getElementById('weather-timeline-container');
+      if (!scrollContainer) return;
+      scrollContainer.scrollTo({ top: 0, behavior: 'auto' });
+    });
+  };
+
   const updateSettings = (newSettings: Partial<UserSettings>) => {
     setSettings((prev) => {
       const updated = { ...prev, ...newSettings };
@@ -218,6 +228,12 @@ export default function App() {
   ]);
 
   const displayData = weatherData ?? lastLiveData;
+
+  useEffect(() => {
+    if (!displayData) return;
+    resetToFirstDay(300);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayData?.daily?.length, displayData?.city]);
 
   return (
     <div

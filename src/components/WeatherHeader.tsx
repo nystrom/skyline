@@ -612,7 +612,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
               
               <div className="flex items-center gap-1.5">
                 <WindDirectionArrow
-                  deg={current.windDeg}
+                  deg={current.windSpeed <= 0 ? 0 : current.windDeg}
                   size={11}
                   className="text-emerald-400"
                   transition
