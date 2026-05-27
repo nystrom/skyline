@@ -79,7 +79,7 @@ export interface SavedLocation {
   state?: string;
 }
 
-export type DataSource = 'live' | 'cached' | 'simulated';
+export type DataSource = 'live' | 'cached';
 
 export interface WeatherFetchResult {
   data: WeatherData;

@@ -26,6 +26,26 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const fastScrollTo = (container: HTMLElement, top: number, durationMs = 450) => {
+    const startTop = container.scrollTop;
+    const delta = top - startTop;
+    if (!Number.isFinite(delta) || Math.abs(delta) < 1) {
+      container.scrollTop = top;
+      return;
+    }
+
+    const start = performance.now();
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      container.scrollTop = startTop + delta * easeOutCubic(t);
+      if (t < 1) requestAnimationFrame(step);
+    };
+
+    requestAnimationFrame(step);
+  };
+
   const scrollToTimelineDay = (idx: number) => {
     const scrollContainer = document.getElementById('weather-timeline-container');
     const element = document.getElementById(`timeline-day-anchor-${idx}`);
@@ -33,14 +53,12 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
 
     const containerTop = scrollContainer.getBoundingClientRect().top;
     const elementTop = element.getBoundingClientRect().top;
-    scrollContainer.scrollTo({
-      top: elementTop - containerTop + scrollContainer.scrollTop,
-      behavior: 'smooth',
-    });
+    const targetTop = elementTop - containerTop + scrollContainer.scrollTop;
+    fastScrollTo(scrollContainer, targetTop, 450);
   };
 
   const handleDayClick = (idx: number) => {
-    onBeforeTimelineScroll?.();
+    onBeforeTimelineScroll?.(500);
     onSelectDay(idx);
     setTimeout(() => scrollToTimelineDay(idx), 50);
   };

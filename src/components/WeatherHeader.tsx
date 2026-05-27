@@ -557,7 +557,6 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
             <div className="text-xs text-slate-300 flex flex-col gap-1">
               <span className="capitalize text-slate-350 min-h-[16px] font-medium">
                 {current.description} • {(() => {
-                  if (dataSource === 'simulated') return 'Simulated Sky';
                   if (dataSource === 'cached') return 'Cached forecast';
                   const rp = weatherData.resolvedProvider;
                   const label =

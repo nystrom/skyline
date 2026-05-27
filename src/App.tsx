@@ -5,7 +5,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { UserSettings, WeatherData, WeatherProvider, SavedLocation, DataSource } from './types';
-import { generateSimulatedWeather } from './utils/weatherFetcher';
 import { fetchWeatherForLocation } from './services/weather/weatherOrchestrator';
 import { geocodeLocation } from './services/geocoding/geocodingService';
 import { isApiKeyValid } from './services/validation';
@@ -73,7 +72,7 @@ export default function App() {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [lastLiveData, setLastLiveData] = useState<WeatherData | null>(null);
   const lastLiveRef = useRef<WeatherData | null>(null);
-  const [dataSource, setDataSource] = useState<DataSource>('simulated');
+  const [dataSource, setDataSource] = useState<DataSource>('live');
   const [fetchWarnings, setFetchWarnings] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -131,7 +130,7 @@ export default function App() {
   };
 
   const handleSelectNow = () => {
-    blockScrollSpy();
+    blockScrollSpy(500);
     setActiveDayIdx(0);
     setTimeout(() => {
       const scrollContainer = document.getElementById('weather-timeline-container');
@@ -145,10 +144,7 @@ export default function App() {
       const targetTop =
         elementTop - containerTop + scrollContainer.scrollTop - containerHeight / 2 + elementHeight / 2;
 
-      scrollContainer.scrollTo({
-        top: Math.max(0, targetTop),
-        behavior: 'smooth',
-      });
+      scrollContainer.scrollTo({ top: Math.max(0, targetTop), behavior: 'auto' });
     }, 100);
   };
 
@@ -174,28 +170,25 @@ export default function App() {
       const isKeylessCapable = settings.provider === 'auto' || settings.provider !== 'openweather';
       const hasValidKey = settings.apiKey && isApiKeyValid(settings.apiKey);
 
-      if (isKeylessCapable || hasValidKey) {
-        const location = await resolveLocationForFetch(controller.signal);
-        if (controller.signal.aborted) return;
-
-        const result = await fetchWeatherForLocation(location, settings, controller.signal);
-        if (controller.signal.aborted) return;
-
-        setWeatherData(result.data);
-        setLastLiveData(result.data);
-        lastLiveRef.current = result.data;
-        if (location.id !== settings.activeLocation?.id) {
-          updateSettings({ activeLocation: location, city: location.label });
-        }
-        setDataSource(result.source === 'cached' ? 'cached' : 'live');
-        setFetchWarnings(result.warnings);
-        setActiveDayIdx(0);
-      } else {
-        const data = generateSimulatedWeather(settings.city, settings.units);
-        setWeatherData(data);
-        setDataSource('simulated');
-        setActiveDayIdx(0);
+      if (!isKeylessCapable && !hasValidKey) {
+        throw new Error('OpenWeather requires an API key. Add a key or switch to Auto / a keyless provider.');
       }
+
+      const location = await resolveLocationForFetch(controller.signal);
+      if (controller.signal.aborted) return;
+
+      const result = await fetchWeatherForLocation(location, settings, controller.signal);
+      if (controller.signal.aborted) return;
+
+      setWeatherData(result.data);
+      setLastLiveData(result.data);
+      lastLiveRef.current = result.data;
+      if (location.id !== settings.activeLocation?.id) {
+        updateSettings({ activeLocation: location, city: location.label });
+      }
+      setDataSource(result.source === 'cached' ? 'cached' : 'live');
+      setFetchWarnings(result.warnings);
+      setActiveDayIdx(0);
     } catch (err: unknown) {
       if (controller.signal.aborted) return;
       console.error(err);

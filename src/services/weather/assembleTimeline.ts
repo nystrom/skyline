@@ -114,7 +114,9 @@ export function assembleTimelineAndForecasts(
     for (let i = 1; i < dayHours.length; i++) {
       if (dayHours[i].interpolated || dayHours[i - 1].interpolated) continue;
       const degDelta = Math.abs(dayHours[i].windDeg - dayHours[i - 1].windDeg);
-      if (degDelta > 45 && degDelta < 315) {
+      const toSpeed = Number(coalesceNumber(dayHours[i].windSpeed).toFixed(1));
+      const fromSpeed = Number(coalesceNumber(dayHours[i - 1].windSpeed).toFixed(1));
+      if (degDelta > 45 && degDelta < 315 && toSpeed >= 2.5 && fromSpeed >= 2.5) {
         timelineEvents.push({
           id: `event-${dIdx}-windshift`,
           time: dayHours[i].time,
@@ -123,9 +125,9 @@ export function assembleTimelineAndForecasts(
           title: 'Breeze Vector Shift',
           description: 'Wind shifts direction',
           iconName: 'navigation',
-          windSpeed: Number(coalesceNumber(dayHours[i].windSpeed).toFixed(1)),
+          windSpeed: toSpeed,
           windDeg: coalesceNumber(dayHours[i].windDeg),
-          windFromSpeed: Number(coalesceNumber(dayHours[i - 1].windSpeed).toFixed(1)),
+          windFromSpeed: fromSpeed,
           windFromDeg: coalesceNumber(dayHours[i - 1].windDeg),
           colorTheme: 'emerald',
           isSpecial: true,
