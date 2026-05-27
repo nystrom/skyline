@@ -541,10 +541,9 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
                 e.stopPropagation(); // Stop trigger onSelectNow timeline leap
                 setShowLocationSelector(true);
               }}
-              className="group/loc inline-flex items-center gap-1.5 text-2xl font-black font-sans tracking-tight text-white hover:text-emerald-300 transition-colors"
+              className="group/loc flex items-center gap-1.5 text-2xl font-black font-sans tracking-tight text-white hover:text-emerald-300 transition-colors"
               title="Tap to search location or pick saved city"
             >
-              <MapPin size={22} className="text-emerald-400 group-hover/loc:scale-110 transition-transform duration-150 shrink-0" />
               <span className="underline underline-offset-4 decoration-slate-600 group-hover/loc:decoration-emerald-400 capitalize duration-150">
                 {weatherData.city}
               </span>
@@ -552,6 +551,10 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
                 {weatherData.country}
               </span>
             </div>
+
+            <span className="font-mono text-[11px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded w-fit tracking-wide shadow-sm">
+              {formattedDate} • {formattedTime}
+            </span>
             
             {/* Weather status + Live client local date and clock */}
             <div className="text-xs text-slate-300 flex flex-col gap-1">
@@ -566,9 +569,6 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
                     rp === 'openweather' ? 'OpenWeather Live' : 'Live';
                   return settings.provider === 'auto' ? `${label} (Auto)` : label;
                 })()}
-              </span>
-              <span className="font-mono text-[11px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded w-fit tracking-wide shadow-sm">
-                {formattedDate} • {formattedTime}
               </span>
             </div>
           </div>

@@ -28,7 +28,7 @@ export const WindDirectionArrow: React.FC<WindDirectionArrowProps> = ({
     size={size}
     className={`shrink-0 ${transition ? 'transition-transform ease-out' : ''} ${className}`}
     style={{
-      transform: `rotate(${deg - 45}deg)`,
+      transform: `rotate(${deg + 45}deg)`,
       ...(transition ? { transitionDuration: `${durationMs}ms` } : {}),
     }}
     title={title ?? `Wind direction: ${Math.round(deg)}°`}
