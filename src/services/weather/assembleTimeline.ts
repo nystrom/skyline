@@ -5,7 +5,7 @@
 
 import type { DailyForecast, WeatherTimelineEvent } from '../../types';
 import type { StandardDailyPoint, StandardHourlyPoint } from './sharedTypes';
-import { getWindDirectionArrow } from './windUtils';
+import { formatTime24 } from '../../utils/unitConverter';
 import { coalesceNumber } from './numbers';
 
 export function assembleTimelineAndForecasts(
@@ -30,7 +30,7 @@ export function assembleTimelineAndForecasts(
       timelineEvents.push({
         id: `event-${dIdx}-hour-${hIdx}`,
         time: pt.time,
-        hourLabel: pt.time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+        hourLabel: formatTime24(pt.time),
         type: 'hourly_status',
         title: `${Math.round(pt.temp)}°`,
         description: pt.description,
@@ -48,7 +48,7 @@ export function assembleTimelineAndForecasts(
     timelineEvents.push({
       id: `event-${dIdx}-sunrise`,
       time: day.sunrise,
-      hourLabel: day.sunrise.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+      hourLabel: formatTime24(day.sunrise),
       type: 'sunrise',
       title: 'Sunrise',
       description: 'First rays break above horizon lines',
@@ -60,7 +60,7 @@ export function assembleTimelineAndForecasts(
     timelineEvents.push({
       id: `event-${dIdx}-sunset`,
       time: day.sunset,
-      hourLabel: day.sunset.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+      hourLabel: formatTime24(day.sunset),
       type: 'sunset',
       title: 'Sunset',
       description: 'Twilight color gradient fadeout',
@@ -73,7 +73,7 @@ export function assembleTimelineAndForecasts(
       timelineEvents.push({
         id: `event-${dIdx}-moonrise`,
         time: day.moonrise,
-        hourLabel: day.moonrise.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+        hourLabel: formatTime24(day.moonrise),
         type: 'moonrise',
         title: 'Moonrise',
         description: 'The moon ascends into the twilight canopy',
@@ -86,7 +86,7 @@ export function assembleTimelineAndForecasts(
       timelineEvents.push({
         id: `event-${dIdx}-moonset`,
         time: day.moonset,
-        hourLabel: day.moonset.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+        hourLabel: formatTime24(day.moonset),
         type: 'moonset',
         title: 'Moonset',
         description: 'The lunar disc slips below the horizon',
@@ -100,11 +100,7 @@ export function assembleTimelineAndForecasts(
       timelineEvents.push({
         id: `event-${dIdx}-peak`,
         time: day.peakTempTime,
-        hourLabel: day.peakTempTime.toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-        }),
+        hourLabel: formatTime24(day.peakTempTime),
         type: 'peak_temp',
         title: `Daily Peak: ${Math.round(day.tempMax)}°`,
         description: 'Solar heat peak of this forecast block',
@@ -122,14 +118,10 @@ export function assembleTimelineAndForecasts(
         timelineEvents.push({
           id: `event-${dIdx}-windshift`,
           time: dayHours[i].time,
-          hourLabel: dayHours[i].time.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true,
-          }),
+          hourLabel: formatTime24(dayHours[i].time),
           type: 'wind_shift',
           title: 'Breeze Vector Shift',
-          description: `Wind shifts direction to ${getWindDirectionArrow(dayHours[i].windDeg)}`,
+          description: 'Wind shifts direction',
           iconName: 'navigation',
           windSpeed: Number(coalesceNumber(dayHours[i].windSpeed).toFixed(1)),
           windDeg: coalesceNumber(dayHours[i].windDeg),
@@ -147,7 +139,7 @@ export function assembleTimelineAndForecasts(
       timelineEvents.push({
         id: 'event-0-now',
         time: liveNow,
-        hourLabel: liveNow.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+        hourLabel: formatTime24(liveNow),
         type: 'now',
         title: 'Current Conditions',
         description: 'You are right here',

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { DailyForecast, UserSettings, WeatherTimelineEvent } from '../types';
 import { TimelineMarkerCard } from './TimelineMarkerCard';
 import { WeatherIcon } from './WeatherIcon';
@@ -14,6 +14,30 @@ interface WeatherTimelineProps {
   daily: DailyForecast[];
   settings: UserSettings;
   activeDayIdx: number;
+  onActiveDayChange: (idx: number) => void;
+  scrollSpyBlockedRef?: React.RefObject<boolean>;
+}
+
+const SCROLL_SPY_THRESHOLD_PX = 12;
+
+function computeVisibleDayIndex(container: HTMLElement, dayCount: number): number {
+  const atBottom =
+    container.scrollTop + container.clientHeight >= container.scrollHeight - 4;
+  if (atBottom) return Math.max(0, dayCount - 1);
+
+  const containerTop = container.getBoundingClientRect().top;
+  let activeIdx = 0;
+
+  for (let i = 0; i < dayCount; i++) {
+    const anchor = document.getElementById(`timeline-day-anchor-${i}`);
+    if (!anchor) continue;
+    const dayTop = anchor.getBoundingClientRect().top - containerTop;
+    if (dayTop <= SCROLL_SPY_THRESHOLD_PX) {
+      activeIdx = i;
+    }
+  }
+
+  return activeIdx;
 }
 
 interface GroupedTimelineItem {
@@ -79,12 +103,11 @@ export const MergedHourlyCard: React.FC<{ events: WeatherTimelineEvent[]; settin
                 {/* Middle part: Wind Speed column */}
                 <div className="relative w-20 h-full flex items-center justify-end shrink-0">
                   <div className="flex items-center gap-1.5 font-mono text-[10px] text-slate-500 z-10 bg-white dark:bg-slate-900 px-1 rounded">
-                    <span
-                      className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-202 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0"
+                    <WindDirectionArrow
+                      deg={evt.windDeg ?? 0}
+                      size={10}
                       title={`Wind direction: ${evt.windDeg}°`}
-                    >
-                      <WindDirectionArrow deg={evt.windDeg ?? 0} size={10} />
-                    </span>
+                    />
                     <span className="font-semibold text-slate-700 dark:text-slate-300">
                       {convertWindSpeed(evt.windSpeed, settings.windSpeedUnit)} {settings.windSpeedUnit}
                     </span>
@@ -112,8 +135,34 @@ export const MergedHourlyCard: React.FC<{ events: WeatherTimelineEvent[]; settin
 export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
   daily,
   settings,
-  activeDayIdx
+  activeDayIdx,
+  onActiveDayChange,
+  scrollSpyBlockedRef,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const activeDayRef = useRef(activeDayIdx);
+
+  useEffect(() => {
+    activeDayRef.current = activeDayIdx;
+  }, [activeDayIdx]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || daily.length === 0) return;
+
+    const syncActiveDay = () => {
+      if (scrollSpyBlockedRef?.current) return;
+
+      const nextIdx = computeVisibleDayIndex(container, daily.length);
+      if (nextIdx !== activeDayRef.current) {
+        onActiveDayChange(nextIdx);
+      }
+    };
+
+    syncActiveDay();
+    container.addEventListener('scroll', syncActiveDay, { passive: true });
+    return () => container.removeEventListener('scroll', syncActiveDay);
+  }, [daily.length, onActiveDayChange, scrollSpyBlockedRef]);
   // Core helper to cluster sequential standard hourly_status events of same sky condition (description)
   const groupTimelineEvents = (events: WeatherTimelineEvent[]): GroupedTimelineItem[] => {
     const grouped: GroupedTimelineItem[] = [];
@@ -163,7 +212,11 @@ export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
   };
 
   return (
-    <div id="weather-timeline-container" className="flex-1 min-h-0 overflow-y-auto scrollbar-none bg-white dark:bg-slate-950 px-4 py-5 pb-24 rounded-t-3xl shadow-inner relative z-10">
+    <div
+      ref={containerRef}
+      id="weather-timeline-container"
+      className="flex-1 min-h-0 overflow-y-auto scrollbar-none bg-white dark:bg-slate-950 px-4 py-5 pb-24 rounded-t-3xl shadow-inner relative z-10"
+    >
       
       {/* Main continuous timeline list */}
       <div className="relative">

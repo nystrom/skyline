@@ -51,7 +51,7 @@ export default function App() {
     const savedTempUnit = (localStorage.getItem('sky_timeline_temp_unit') as 'C' | 'F') || 'C';
     const savedWindSpeedUnit =
       (localStorage.getItem('sky_timeline_wind_speed_unit') as 'm/s' | 'kph' | 'mph' | 'knots') || 'm/s';
-    const savedClockFormat = (localStorage.getItem('sky_timeline_clock_format') as '12h' | '24h') || '12h';
+    const savedClockFormat = (localStorage.getItem('sky_timeline_clock_format') as '12h' | '24h') || '24h';
     const savedShowSunriseSunset = localStorage.getItem('sky_timeline_show_sunrise_sunset') !== 'false';
     const savedShowMoonriseMoonset = localStorage.getItem('sky_timeline_show_moonrise_moonset') !== 'false';
     const activeLocation = loadActiveLocation() ?? defaultLocation(savedCity);
@@ -79,6 +79,14 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [activeDayIdx, setActiveDayIdx] = useState(0);
   const loadAbortRef = useRef<AbortController | null>(null);
+  const scrollSpyBlockedRef = useRef(false);
+
+  const blockScrollSpy = (ms = 700) => {
+    scrollSpyBlockedRef.current = true;
+    window.setTimeout(() => {
+      scrollSpyBlockedRef.current = false;
+    }, ms);
+  };
 
   const updateSettings = (newSettings: Partial<UserSettings>) => {
     setSettings((prev) => {
@@ -123,6 +131,7 @@ export default function App() {
   };
 
   const handleSelectNow = () => {
+    blockScrollSpy();
     setActiveDayIdx(0);
     setTimeout(() => {
       const scrollContainer = document.getElementById('weather-timeline-container');
@@ -262,11 +271,18 @@ export default function App() {
                   daily={displayData.daily}
                   selectedDayIdx={activeDayIdx}
                   onSelectDay={setActiveDayIdx}
+                  onBeforeTimelineScroll={blockScrollSpy}
                   settings={settings}
                 />
               </div>
 
-              <WeatherTimeline daily={displayData.daily} settings={settings} activeDayIdx={activeDayIdx} />
+              <WeatherTimeline
+                daily={displayData.daily}
+                settings={settings}
+                activeDayIdx={activeDayIdx}
+                onActiveDayChange={setActiveDayIdx}
+                scrollSpyBlockedRef={scrollSpyBlockedRef}
+              />
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500 font-mono space-y-4 min-h-[400px]">

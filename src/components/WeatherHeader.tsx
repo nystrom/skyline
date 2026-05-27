@@ -8,7 +8,7 @@ import { WeatherData, UserSettings, SavedLocation, DataSource } from '../types';
 import { WeatherIcon } from './WeatherIcon';
 import { MapPin, Search, Settings, Wind, Info, RefreshCw, Trash2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { convertTemp, convertWindSpeed, convertPrecipAccum, formatTime } from '../utils/unitConverter';
+import { convertTemp, convertWindSpeed, convertPrecipAccum, formatTime24 } from '../utils/unitConverter';
 import { WindDirectionArrow } from './WindDirectionArrow';
 import { searchLocations, reverseGeocode } from '../utils/weatherFetcher';
 import type { GeocodedLocation } from '../services/geocoding/types';
@@ -258,7 +258,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
     day: 'numeric',
   });
 
-  const formattedTime = formatTime(currentTime, settings.clockFormat);
+  const formattedTime = formatTime24(currentTime);
 
   const current = weatherData.current;
   const isMetric = settings.units === 'metric';
@@ -362,35 +362,6 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
                   <option value="mph">mph</option>
                   <option value="knots">knots</option>
                 </select>
-              </div>
-
-               {/* Clock Format Selector */}
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400 font-medium font-sans">Time Display</span>
-                <div className="flex gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-700">
-                  <button
-                    type="button"
-                    onClick={() => updateSettings({ clockFormat: '12h' })}
-                    className={`px-2.5 py-1 rounded text-[10px] font-bold transition duration-150 ${
-                      settings.clockFormat === '12h'
-                        ? 'bg-emerald-500 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    12 Hr
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => updateSettings({ clockFormat: '24h' })}
-                    className={`px-2.5 py-1 rounded text-[10px] font-bold transition duration-150 ${
-                      settings.clockFormat === '24h'
-                        ? 'bg-emerald-500 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    24 Hr
-                  </button>
-                </div>
               </div>
 
               {/* Astro Display Checkboxes */}
@@ -641,12 +612,13 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
               </span>
               
               <div className="flex items-center gap-1.5">
-                <span
-                  className="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center transition-all duration-300 shadow-sm shrink-0"
+                <WindDirectionArrow
+                  deg={current.windDeg}
+                  size={11}
+                  className="text-emerald-400"
+                  transition
                   title={`Wind direction: ${current.windDeg}°`}
-                >
-                  <WindDirectionArrow deg={current.windDeg} size={11} className="text-emerald-400" transition />
-                </span>
+                />
                 
                 <span className="font-bold text-slate-200 text-xs truncate">
                   {convertWindSpeed(current.windSpeed, settings.windSpeedUnit)} {settings.windSpeedUnit}

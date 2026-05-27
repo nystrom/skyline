@@ -45,10 +45,23 @@ export function convertPrecipAccum(
   return `${accumMm.toFixed(1)} mm`;
 }
 
+const TIME_24H: Intl.DateTimeFormatOptions = {
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+};
+
+export function formatTime24(date: Date): string {
+  return date.toLocaleTimeString('en-US', TIME_24H);
+}
+
 export function formatTime(date: Date, format: '12h' | '24h'): string {
+  if (format === '24h') {
+    return formatTime24(date);
+  }
   return date.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
-    hour12: format === '12h',
+    hour12: true,
   });
 }

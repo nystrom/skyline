@@ -4,6 +4,7 @@
  */
 
 import { WeatherData, DailyForecast, WeatherTimelineEvent } from '../types';
+import { formatTime24 } from './unitConverter';
 import { getWindDirectionArrow } from '../services/weather/windUtils';
 import { getMoonriseMoonset } from '../services/weather/moonUtils';
 
@@ -129,7 +130,7 @@ export function generateSimulatedWeather(city: string, _units?: 'metric' | 'impe
       timelineEvents.push({
         id: `${d}-h-${h}`,
         time: eventTime,
-        hourLabel: eventTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+        hourLabel: formatTime24(eventTime),
         type: 'hourly_status',
         title: hourlyTemp + '°',
         description: finalCond.desc,
@@ -147,7 +148,7 @@ export function generateSimulatedWeather(city: string, _units?: 'metric' | 'impe
     timelineEvents.push({
       id: `${d}-sunrise`,
       time: sunriseTime,
-      hourLabel: sunriseTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+      hourLabel: formatTime24(sunriseTime),
       type: 'sunrise',
       title: 'Sunrise',
       description: 'First morning light breaks over the horizon',
@@ -158,7 +159,7 @@ export function generateSimulatedWeather(city: string, _units?: 'metric' | 'impe
     timelineEvents.push({
       id: `${d}-sunset`,
       time: sunsetTime,
-      hourLabel: sunsetTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+      hourLabel: formatTime24(sunsetTime),
       type: 'sunset',
       title: 'Sunset',
       description: 'Sunset and introduction of evening cooling',
@@ -169,7 +170,7 @@ export function generateSimulatedWeather(city: string, _units?: 'metric' | 'impe
     timelineEvents.push({
       id: `${d}-moonrise`,
       time: moonriseTime,
-      hourLabel: moonriseTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+      hourLabel: formatTime24(moonriseTime),
       type: 'moonrise',
       title: 'Moonrise',
       description: 'The moon ascends into the twilight canopy',
@@ -180,7 +181,7 @@ export function generateSimulatedWeather(city: string, _units?: 'metric' | 'impe
     timelineEvents.push({
       id: `${d}-moonset`,
       time: moonsetTime,
-      hourLabel: moonsetTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+      hourLabel: formatTime24(moonsetTime),
       type: 'moonset',
       title: 'Moonset',
       description: 'The lunar disc slips below the horizon',
@@ -191,10 +192,10 @@ export function generateSimulatedWeather(city: string, _units?: 'metric' | 'impe
     timelineEvents.push({
       id: `${d}-peak-temp`,
       time: peakTime,
-      hourLabel: peakTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+      hourLabel: formatTime24(peakTime),
       type: 'peak_temp',
       title: `Daily Peak: ${dayMax}°`,
-      description: `Thermodynamic peak at ${peakTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`,
+      description: `Thermodynamic peak at ${formatTime24(peakTime)}`,
       iconName: 'flame',
       tempMax: dayMax,
       colorTheme: 'rose',
@@ -206,7 +207,7 @@ export function generateSimulatedWeather(city: string, _units?: 'metric' | 'impe
     timelineEvents.push({
       id: `${d}-wind-shift`,
       time: windShiftTime,
-      hourLabel: windShiftTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+      hourLabel: formatTime24(windShiftTime),
       type: 'wind_shift',
       title: 'Breeze Vector Shift',
       description: `Wind shifts direction 130° to ${getWindDirectionArrow(shiftToDeg)}`,
@@ -224,7 +225,7 @@ export function generateSimulatedWeather(city: string, _units?: 'metric' | 'impe
       timelineEvents.push({
         id: '0-now',
         time: nowTime,
-        hourLabel: nowTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+        hourLabel: formatTime24(nowTime),
         type: 'now',
         title: 'Current Conditions',
         description: 'You are right here',

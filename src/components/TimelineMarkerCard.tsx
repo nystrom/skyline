@@ -223,12 +223,11 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({ event, s
           <div className="w-20 shrink-0 flex items-center justify-end gap-1.5 font-mono text-[10px] text-slate-500 h-full">
             {event.windSpeed !== undefined && (
               <>
-                <span
-                  className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0"
+                <WindDirectionArrow
+                  deg={event.windDeg ?? 0}
+                  size={10}
                   title={`Wind direction: ${event.windDeg}°`}
-                >
-                  <WindDirectionArrow deg={event.windDeg ?? 0} size={10} />
-                </span>
+                />
                 <span className="font-semibold text-slate-700 dark:text-slate-300">
                   {convertWindSpeed(event.windSpeed, settings.windSpeedUnit)} {settings.windSpeedUnit}
                 </span>

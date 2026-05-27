@@ -13,6 +13,7 @@ interface DailyScrollerProps {
   daily: DailyForecast[];
   selectedDayIdx: number;
   onSelectDay: (idx: number) => void;
+  onBeforeTimelineScroll?: (ms?: number) => void;
   settings: UserSettings;
 }
 
@@ -20,6 +21,7 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
   daily,
   selectedDayIdx,
   onSelectDay,
+  onBeforeTimelineScroll,
   settings,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -38,6 +40,7 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
   };
 
   const handleDayClick = (idx: number) => {
+    onBeforeTimelineScroll?.();
     onSelectDay(idx);
     setTimeout(() => scrollToTimelineDay(idx), 50);
   };
