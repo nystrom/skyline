@@ -521,7 +521,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
       {/* Display Current Condition Panel (Mobile First layout with tap interaction) */}
       <div 
         onClick={onSelectNow}
-        className="bg-gradient-to-br from-slate-800/85 to-slate-900/70 p-5 rounded-3xl border border-slate-700/50 shadow-inner relative z-10 cursor-pointer hover:border-emerald-500/50 hover:from-slate-800 hover:to-slate-850 active:scale-[0.99] transition-all duration-200 group"
+        className="bg-gradient-to-br from-slate-800/85 to-slate-900/70 p-4 rounded-3xl border border-slate-700/50 shadow-inner relative z-10 cursor-pointer hover:border-emerald-500/50 hover:from-slate-800 hover:to-slate-850 active:scale-[0.99] transition-all duration-200 group"
         title="Tap card to view NOW on the timeline"
       >
         {/* Dynamic weather particles animation overlay backdrop */}
