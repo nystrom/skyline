@@ -68,6 +68,13 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
     const activePill = document.getElementById(`horizontal-pill-${selectedDayIdx}`);
     const container = containerRef.current;
     if (activePill && container) {
+      // Prefer native scroll-into-view for horizontal scrollers; it tends to be
+      // more robust than manual offset math across layout/zoom/font changes.
+      // block:'nearest' prevents any vertical scrolling of the page.
+      requestAnimationFrame(() => {
+        activePill.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      });
+
       if (selectedDayIdx === 0) {
         container.scrollTo({
           left: 0,
@@ -78,9 +85,11 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
       
       const containerWidth = container.clientWidth;
       if (containerWidth > 0) {
-        const pillLeft = activePill.offsetLeft;
-        const pillWidth = activePill.clientWidth;
-        const targetScroll = pillLeft - (containerWidth / 2) + (pillWidth / 2);
+        const containerRect = container.getBoundingClientRect();
+        const pillRect = activePill.getBoundingClientRect();
+        const pillLeft = pillRect.left - containerRect.left + container.scrollLeft;
+        const pillWidth = pillRect.width;
+        const targetScroll = pillLeft - containerWidth / 2 + pillWidth / 2;
         
         container.scrollTo({
           left: Math.max(0, targetScroll),
