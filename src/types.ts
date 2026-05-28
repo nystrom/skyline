@@ -3,6 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export interface WeatherWarning {
+  sender?: string;
+  event: string;
+  description: string;
+  starts: Date;
+  ends: Date;
+  severity?: 'minor' | 'moderate' | 'severe' | 'extreme' | 'unknown';
+}
+
 export interface WeatherTimelineEvent {
   id: string;
   time: Date;             // Exact date code of event
@@ -23,6 +32,7 @@ export interface WeatherTimelineEvent {
   humidity?: number;
   isSpecial?: boolean;    // Custom animations target this
   colorTheme: string;     // Color string (border/bg accents)
+  warnings?: WeatherWarning[];
 }
 
 export interface DailyForecast {
@@ -63,6 +73,7 @@ export interface WeatherData {
     sunsetTime: Date;
     moonriseTime?: Date;
     moonsetTime?: Date;
+    warnings?: WeatherWarning[];
   };
   daily: DailyForecast[];
   resolvedProvider?: WeatherProvider;

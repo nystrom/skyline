@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { SavedLocation, UserSettings, WeatherFetchResult, WeatherProvider } from '../../types';
+import type { SavedLocation, UserSettings, WeatherFetchResult, WeatherProvider, WeatherWarning } from '../../types';
 import { geocodeLocation } from '../geocoding/geocodingService';
 import { isApiKeyValid } from '../validation';
 import { WEATHER_TIMEOUT_MS, withAbortTimeout } from '../http';
@@ -16,6 +16,7 @@ import {
 import type { ConcreteWeatherProvider } from './providerTypes';
 import { getWeatherProvider } from './providerRegistry';
 import type { ProviderRawBundle, WeatherLocationInput } from './sharedTypes';
+import { fetchAllWarnings } from './warningsService';
 
 const weatherCache: Record<string, { data: WeatherFetchResult; timestamp: number }> = {};
 const inFlight = new Map<string, Promise<WeatherFetchResult>>();
@@ -101,7 +102,8 @@ async function fetchRawFromProvider(
 function buildMergedResult(
   primaryId: ConcreteWeatherProvider,
   location: WeatherLocationInput,
-  ordered: { id: ConcreteWeatherProvider; bundle: ProviderRawBundle }[]
+  ordered: { id: ConcreteWeatherProvider; bundle: ProviderRawBundle }[],
+  consolidatedWarnings?: WeatherWarning[]
 ): WeatherFetchResult {
   const primaryEntry = ordered[0];
   const supplements = ordered.slice(1);
@@ -121,6 +123,7 @@ function buildMergedResult(
     rawHourly: mergedHourly,
     dailyPoints: mergedDaily,
     targetDays: TARGET_FORECAST_DAYS,
+    warnings: consolidatedWarnings,
   });
 
   data.resolvedProvider = primaryId;
@@ -156,9 +159,12 @@ export async function fetchWeatherForLocation(
 
   const promise = (async (): Promise<WeatherFetchResult> => {
     const locInput = toLocationInput(location);
-    const settled = await Promise.allSettled(
-      chain.map((providerId) => fetchRawFromProvider(providerId, location, settings, signal))
-    );
+    const [settled, warnings] = await Promise.all([
+      Promise.allSettled(
+        chain.map((providerId) => fetchRawFromProvider(providerId, location, settings, signal))
+      ),
+      fetchAllWarnings(locInput, settings, signal).catch(() => []),
+    ]);
 
     const successful: { id: ConcreteWeatherProvider; bundle: ProviderRawBundle }[] = [];
     const errors: string[] = [];
@@ -189,7 +195,7 @@ export async function fetchWeatherForLocation(
       ...successful.filter((entry) => entry.id !== resolvedPrimaryId),
     ];
 
-    const finalResult = buildMergedResult(resolvedPrimaryId, locInput, ordered);
+    const finalResult = buildMergedResult(resolvedPrimaryId, locInput, ordered, warnings);
 
     // Fallback should be silent in the UI (keep console warnings above).
     // Only surface warnings when the intended primary provider succeeded.

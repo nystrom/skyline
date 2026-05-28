@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { WeatherData } from '../../types';
+import type { WeatherData, WeatherWarning } from '../../types';
 
 export interface StandardHourlyPoint {
   time: Date;
@@ -17,6 +17,7 @@ export interface StandardHourlyPoint {
   humidity: number;
   /** True when this hour was synthesized to fill a gap in provider data. */
   interpolated?: boolean;
+  warnings?: WeatherWarning[];
 }
 
 export interface StandardDailyPoint {
@@ -66,6 +67,7 @@ export interface ProviderRawBundle {
   current: WeatherData['current'];
   timeZone?: string;
   timeZoneOffsetMinutes?: number;
+  warnings?: WeatherWarning[];
 }
 
 export interface ForecastBuildInput {
@@ -77,6 +79,7 @@ export interface ForecastBuildInput {
   timeZone?: string;
   timeZoneOffsetMinutes?: number;
   targetDays?: number;
+  warnings?: WeatherWarning[];
 }
 
 export interface ForecastBuildResult {

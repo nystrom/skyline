@@ -51,6 +51,7 @@ export function assembleTimelineAndForecasts(
         precipAccum: Number(coalesceNumber(pt.precipAccum).toFixed(1)),
         humidity: pt.humidity,
         colorTheme: pt.precipProb > 40 ? 'blue' : pt.temp > 24 ? 'amber' : 'slate',
+        warnings: pt.warnings,
       });
     });
 
@@ -138,6 +139,7 @@ export function assembleTimelineAndForecasts(
         humidity: currentConditions?.humidity,
         colorTheme: 'blue',
         isSpecial: true,
+        warnings: currentConditions?.warnings,
       });
     }
 

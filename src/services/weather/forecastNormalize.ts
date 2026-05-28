@@ -307,9 +307,25 @@ export function buildForecast(input: ForecastBuildInput): ForecastBuildResult {
   daily = enrichDailyFromHourly(trimmed.daily, trimmed.hourly);
   hourly = trimmed.hourly;
 
+  const now = new Date();
+  const warnings = input.warnings || [];
+
+  const currentWarnings = warnings.filter((w) => w.starts <= now && now <= w.ends);
+  const currentWithWarnings = {
+    ...input.current,
+    warnings: currentWarnings.length > 0 ? currentWarnings : undefined,
+  };
+
+  const hourlyWithWarnings = hourly.map((h) => {
+    const activeWarnings = warnings.filter((w) => w.starts <= h.time && h.time <= w.ends);
+    return {
+      ...h,
+      warnings: activeWarnings.length > 0 ? activeWarnings : undefined,
+    };
+  });
+
   const { lat, lon, label, country } = input.location;
   const cityName = label.split(',')[0].trim();
-  const firstDay = daily[0];
 
   const data: WeatherData = {
     city: cityName,
@@ -318,14 +334,14 @@ export function buildForecast(input: ForecastBuildInput): ForecastBuildResult {
     lon,
     timeZone: input.timeZone,
     timeZoneOffsetMinutes: input.timeZoneOffsetMinutes,
-    current: input.current,
+    current: currentWithWarnings,
     daily: assembleTimelineAndForecasts(
       input.currentTemp,
-      hourly,
+      hourlyWithWarnings,
       daily,
       input.timeZone,
       input.timeZoneOffsetMinutes,
-      input.current,
+      currentWithWarnings,
     ),
     forecastDayCount: daily.length,
     realForecastDayCount: realForecastDays,
