@@ -53,12 +53,25 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
 
   const scrollToTimelineDay = (idx: number) => {
     const scrollContainer = document.getElementById('weather-timeline-container');
-    const dayAnchor = document.getElementById(`timeline-day-anchor-${idx}`);
-    if (!scrollContainer || !dayAnchor) return;
+    if (!scrollContainer) return;
 
     const containerTop = scrollContainer.getBoundingClientRect().top;
     const pinned = readTopStackHeight(scrollContainer);
     const visibleHeight = scrollContainer.clientHeight - pinned;
+
+    // Today: scroll to NOW at 20% down, same as clicking current conditions.
+    if (idx === 0) {
+      const nowEl = document.getElementById('timeline-event-now');
+      if (nowEl) {
+        const nowTop = nowEl.getBoundingClientRect().top;
+        const target = nowTop - containerTop + scrollContainer.scrollTop - pinned - visibleHeight * 0.2;
+        fastScrollTo(scrollContainer, Math.max(0, target), 450);
+        return;
+      }
+    }
+
+    const dayAnchor = document.getElementById(`timeline-day-anchor-${idx}`);
+    if (!dayAnchor) return;
 
     // Minimum scroll: put the day anchor flush at the top of the visible area.
     const dayAnchorTop = dayAnchor.getBoundingClientRect().top;
