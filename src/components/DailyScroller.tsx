@@ -109,7 +109,7 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
   return (
     <div
       id="daily-scroller-main"
-      className="w-full p-3 border-b border-[color:var(--sky-border)] shrink-0"
+      className="w-full p-0 border-b border-[color:var(--sky-border)] shrink-0"
       style={{
         background: 'linear-gradient(180deg, var(--sky-card-2), var(--sky-card))',
         backdropFilter: 'blur(10px)',
@@ -121,7 +121,7 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
       <div 
         ref={containerRef}
         id="horizontal-day-scroller" 
-        className="flex gap-3 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 select-none"
+        className="flex gap-0 overflow-x-auto pb-0 scrollbar-none px-0 select-none"
       >
         {daily.map((day, idx) => {
           const isSelected = selectedDayIdx === idx;

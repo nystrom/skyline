@@ -183,6 +183,13 @@
   }
 }
 
+/* User preference: no rounded corners anywhere in app UI */
+#app-root-container *,
+#app-root-container *::before,
+#app-root-container *::after {
+  border-radius: 0 !important;
+}
+
 @keyframes rainSlide {
   0% { transform: translateY(-40px); }
   100% { transform: translateY(40px); }

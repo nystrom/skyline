@@ -340,7 +340,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
   return (
     <div
       id="weather-header-container"
-      className="w-full rounded-b-3xl p-3 relative overflow-hidden shrink-0 text-[color:var(--sky-fg)] border-b border-white/10"
+      className="w-full rounded-none pt-3 px-3 pb-0 relative overflow-hidden shrink-0 text-[color:var(--sky-fg)] border-b border-white/10"
       style={{
         background: 'linear-gradient(180deg, var(--sky-hero-top), var(--sky-hero-bottom))',
         boxShadow: '0 18px 50px rgba(0,0,0,0.22)',
@@ -351,7 +351,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
       <div className="absolute right-0 top-0 w-64 h-64 bg-[color:rgba(124,246,255,0.14)] rounded-full blur-3xl pointer-events-none -mr-10 -mt-10 animate-pulse" />
       
       {/* Top Header Controls row */}
-      <div className="flex items-center justify-between gap-2 mb-3 relative z-10">
+      <div className="flex items-center justify-between gap-2 mb-2 relative z-10">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-xl border border-white/10 bg-white/5 text-[color:var(--sky-accent)] sky-accent-glow">
             <WeatherIcon name="sun" size={18} className="animate-spin-slow text-[color:var(--sky-accent)]" />
@@ -637,25 +637,26 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
       )}
 
       {/* Display Current Condition Panel (Mobile First layout with tap interaction) */}
-      <div 
-        onClick={onSelectNow}
-        onKeyDown={(e) => e.key === 'Enter' || e.key === ' ' ? onSelectNow?.() : undefined}
-        role="button"
-        tabIndex={0}
-        className="p-3 rounded-3xl border border-white/10 shadow-inner relative z-10 cursor-pointer active:scale-[0.99] transition-all duration-200 group sky-ring"
-        style={{
-          ...conditionCardStyle(current.iconName, current.description),
-        }}
-        aria-label="View current conditions on timeline"
-        title="Tap card to view NOW on the timeline"
-      >
-        {/* Dynamic weather particles animation overlay backdrop */}
-        {current.iconName.includes('rain') && (
-          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl opacity-20">
-            <div className="absolute top-[-50px] left-0 right-0 h-[200px] bg-repeat animate-rain-slide opacity-40" 
-                 style={{ backgroundImage: 'linear-gradient(to bottom, transparent, rgba(59,130,246,0.3))' }} />
-          </div>
-        )}
+      <div className="-mx-3">
+        <div 
+          onClick={onSelectNow}
+          onKeyDown={(e) => e.key === 'Enter' || e.key === ' ' ? onSelectNow?.() : undefined}
+          role="button"
+          tabIndex={0}
+          className="p-3 rounded-3xl border border-white/10 shadow-inner relative z-10 cursor-pointer active:scale-[0.99] transition-all duration-200 group sky-ring"
+          style={{
+            ...conditionCardStyle(current.iconName, current.description),
+          }}
+          aria-label="View current conditions on timeline"
+          title="Tap card to view NOW on the timeline"
+        >
+          {/* Dynamic weather particles animation overlay backdrop */}
+          {current.iconName.includes('rain') && (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl opacity-20">
+              <div className="absolute top-[-50px] left-0 right-0 h-[200px] bg-repeat animate-rain-slide opacity-40" 
+                   style={{ backgroundImage: 'linear-gradient(to bottom, transparent, rgba(59,130,246,0.3))' }} />
+            </div>
+          )}
 
         <div className="flex justify-between items-start">
           <div className="space-y-1.5 flex-1 pr-2">
@@ -764,6 +765,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
 
