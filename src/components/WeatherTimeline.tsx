@@ -124,8 +124,9 @@ function instantTheme(type: string) {
         ring: 'ring-fuchsia-200 dark:ring-fuchsia-900/60',
         connector: 'bg-fuchsia-200 dark:bg-fuchsia-900/60',
         time: 'text-fuchsia-600 dark:text-fuchsia-400',
-        pill: 'bg-fuchsia-50/90 dark:bg-fuchsia-950/60 border-fuchsia-200 dark:border-fuchsia-900 text-fuchsia-800 dark:text-fuchsia-300',
-        icon: 'text-fuchsia-600 dark:text-fuchsia-400',
+        pill: 'border-fuchsia-400/60 dark:border-fuchsia-700/60 text-white',
+        pillStyle: { background: 'linear-gradient(to right, #f97316, #e11d48, #7c3aed)' } as React.CSSProperties,
+        icon: 'text-white/90',
       };
     case 'moonrise':
       return {
@@ -352,7 +353,7 @@ const InstantRow: React.FC<InstantRowProps> = ({ event, settings, tz }) => {
       {/* Horizontal connector + pill */}
       <div className="flex-1 pr-4 flex items-center gap-0">
         <div className={`h-px w-3 shrink-0 ${theme.connector}`} />
-        <div className={`flex items-center gap-1.5 px-2.5 py-[4px] rounded-full text-[11px] font-bold border shrink-0 ${theme.pill}`}>
+        <div className={`flex items-center gap-1.5 px-2.5 py-[4px] rounded-full text-[11px] font-bold border shrink-0 ${theme.pill}`} style={'pillStyle' in theme ? theme.pillStyle : undefined}>
           {event.type === 'sunrise' && (
             <>
               <Sunrise size={10} className={theme.icon} />
