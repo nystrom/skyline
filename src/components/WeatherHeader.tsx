@@ -264,15 +264,15 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
   const isMetric = settings.units === 'metric';
 
   return (
-    <div id="weather-header-container" className="w-full bg-slate-900 text-white rounded-b-3xl shadow-xl border-b border-slate-800 p-5 relative overflow-hidden shrink-0">
+    <div id="weather-header-container" className="w-full bg-slate-900 text-white rounded-b-3xl shadow-xl border-b border-slate-800 p-3 relative overflow-hidden shrink-0">
       {/* Decorative ambient background reflection indicating weather types */}
       <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -mr-10 -mt-10 animate-pulse" />
       
       {/* Top Header Controls row */}
-      <div className="flex items-center justify-between gap-2 mb-4 relative z-10">
+      <div className="flex items-center justify-between gap-2 mb-3 relative z-10">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-slate-800/80 rounded-xl text-emerald-400">
-            <WeatherIcon name="sun" size={20} className="animate-spin-slow" />
+          <div className="p-1.5 bg-slate-800/80 rounded-xl text-emerald-400">
+            <WeatherIcon name="sun" size={18} className="animate-spin-slow" />
           </div>
           <div>
             <h1 className="text-lg font-bold tracking-tight font-sans">Skyline</h1>
@@ -283,23 +283,23 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
           <button
             id="gps-location-btn"
             onClick={handleUseGeolocation}
-            className="p-2 bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white rounded-xl transition duration-150 flex items-center justify-center cursor-pointer"
+            className="p-1.5 bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white rounded-xl transition duration-150 flex items-center justify-center cursor-pointer"
             title="Use current GPS coordinate location"
           >
-            <MapPin size={18} />
+            <MapPin size={16} />
           </button>
           
           <button
             id="settings-drawer-btn"
             onClick={() => setShowSettings(!showSettings)}
-            className={`p-2 rounded-xl transition duration-150 flex items-center justify-center cursor-pointer ${
+            className={`p-1.5 rounded-xl transition duration-150 flex items-center justify-center cursor-pointer ${
               showSettings || settings.apiKey 
                 ? 'bg-emerald-500/20 text-emerald-400' 
                 : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
             }`}
             title="OpenWeather API Key configuration"
           >
-            <Settings size={18} />
+            <Settings size={16} />
           </button>
         </div>
       </div>
@@ -312,10 +312,10 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className="overflow-hidden bg-slate-800/95 border border-slate-705 p-5 rounded-2xl mb-4 relative z-10 space-y-4"
+            className="overflow-hidden bg-slate-800/95 border border-slate-705 p-4 rounded-2xl mb-3 relative z-10 space-y-3"
           >
             {/* Display Options */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               <span className="text-[10px] font-bold text-slate-300 tracking-wider uppercase block">
                 Display Options
               </span>
@@ -521,7 +521,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
       {/* Display Current Condition Panel (Mobile First layout with tap interaction) */}
       <div 
         onClick={onSelectNow}
-        className="bg-gradient-to-br from-slate-800/85 to-slate-900/70 p-4 rounded-3xl border border-slate-700/50 shadow-inner relative z-10 cursor-pointer hover:border-emerald-500/50 hover:from-slate-800 hover:to-slate-850 active:scale-[0.99] transition-all duration-200 group"
+        className="bg-gradient-to-br from-slate-800/85 to-slate-900/70 p-3 rounded-3xl border border-slate-700/50 shadow-inner relative z-10 cursor-pointer hover:border-emerald-500/50 hover:from-slate-800 hover:to-slate-850 active:scale-[0.99] transition-all duration-200 group"
         title="Tap card to view NOW on the timeline"
       >
         {/* Dynamic weather particles animation overlay backdrop */}
@@ -552,7 +552,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
               </span>
             </div>
 
-            <span className="font-mono text-[11px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded w-fit tracking-wide shadow-sm">
+            <span className="text-[12px] text-slate-300 font-semibold tracking-tight">
               {formattedDate} • {formattedTime}
             </span>
             
@@ -574,14 +574,14 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
           </div>
 
           <div className="flex flex-col items-end shrink-0 pt-1">
-            <WeatherIcon name={current.iconName} className="text-amber-400 drop-shadow-[0_0_8px_rgba(242,152,11,0.55)] animate-pulse" size={44} />
+            <WeatherIcon name={current.iconName} className="text-amber-400 drop-shadow-[0_0_8px_rgba(242,152,11,0.55)] animate-pulse" size={40} />
           </div>
         </div>
 
         {/* Temperature Block and High-Visual Stats Bar */}
-        <div className="mt-4 pt-3.5 border-t border-slate-700/50 grid grid-cols-12 gap-2 items-center">
+        <div className="mt-3 pt-3 border-t border-slate-700/50 grid grid-cols-12 gap-1.5 items-center">
           <div className="col-span-5">
-            <div className="text-4xl font-black tracking-tighter text-white font-sans flex items-start">
+            <div className="text-3xl font-black tracking-tighter text-white font-sans flex items-start">
               {convertTemp(current.temp, settings.tempUnit)}
               <span className="text-xl font-medium mt-1 select-none">°</span>
             </div>

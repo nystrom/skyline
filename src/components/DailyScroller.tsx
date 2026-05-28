@@ -100,7 +100,7 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
   }, [selectedDayIdx]);
 
   return (
-    <div id="daily-scroller-main" className="w-full bg-slate-50 dark:bg-slate-900/60 p-4 border-b border-slate-250 dark:border-slate-800/80 shrink-0">
+    <div id="daily-scroller-main" className="w-full bg-slate-50 dark:bg-slate-900/60 p-3 border-b border-slate-250 dark:border-slate-800/80 shrink-0">
 
 
       {/* HORIZONTAL scrolling container with hide scrollbar utilities */}
@@ -121,7 +121,7 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
               id={`horizontal-pill-${idx}`}
               key={day.shortDate}
               onClick={() => handleDayClick(idx)}
-              className={`flex-shrink-0 w-[88px] p-3 rounded-2xl border transition duration-200 flex flex-col items-center text-center relative cursor-pointer ${
+              className={`flex-shrink-0 w-[84px] p-2.5 rounded-2xl border transition duration-200 flex flex-col items-center text-center relative cursor-pointer ${
                 isSelected
                   ? 'bg-white dark:bg-slate-800 border-emerald-500 shadow-md ring-1 ring-emerald-500/10'
                   : 'bg-white/80 dark:bg-slate-900/40 border-slate-200/60 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-900 hover:border-slate-350'
@@ -142,7 +142,7 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
               </span>
 
               {/* Icon & Basic Condition text snippet */}
-              <div className="my-2 p-1.5 bg-slate-50 dark:bg-slate-950/40 rounded-xl flex items-center justify-center">
+              <div className="my-1 flex items-center justify-center">
                 <WeatherIcon 
                   name={day.iconName} 
                   className={isSelected ? 'text-emerald-500 animate-pulse' : 'text-slate-500 dark:text-slate-400'} 
@@ -151,7 +151,7 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
               </div>
 
               {/* High / Low Temp range values */}
-              <div className="flex items-center gap-1.5 text-xs font-mono font-bold border-t border-slate-100 dark:border-slate-800/80 pt-2 w-full justify-center">
+              <div className="flex items-center gap-1.5 text-xs font-mono font-bold border-t border-slate-100 dark:border-slate-800/80 pt-[6px] w-full justify-center">
                 <span className="text-slate-800 dark:text-slate-200">{convertTemp(day.tempMax, settings.tempUnit)}°</span>
                 <span className="text-slate-300 dark:text-slate-600 font-normal">|</span>
                 <span className="text-slate-400 font-normal">{convertTemp(day.tempMin, settings.tempUnit)}°</span>

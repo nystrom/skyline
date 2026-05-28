@@ -248,9 +248,9 @@ export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
               }`}
             >
               {/* Day Section Header card with Sticky capability */}
-              <div className="sticky top-0 bg-white/95 dark:bg-slate-950/95 py-2.5 z-20 flex items-center justify-between border-b border-slate-100 dark:border-slate-800/30">
+              <div className="sticky top-0 bg-white/95 dark:bg-slate-950/95 py-2 z-20 flex items-center justify-between border-b border-slate-100 dark:border-slate-800/30">
                 <div className="flex items-center gap-2">
-                  <div className={`inline-flex items-center gap-2 text-xs font-mono font-bold tracking-wider px-2 py-0.5 rounded-lg ${
+                  <div className={`inline-flex items-center gap-2 text-xs font-mono font-bold tracking-wider px-1.5 py-0.5 rounded-lg ${
                     isSelectedDay 
                       ? 'bg-emerald-580 text-white font-extrabold bg-emerald-500 shadow-sm' 
                       : 'bg-slate-105 text-slate-600 dark:bg-slate-900 dark:text-slate-400'
