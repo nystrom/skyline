@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Navigation } from 'lucide-react';
+import { windDegToRotation } from '@/src/services/weather/windUtils';
 
 interface WindDirectionArrowProps {
   deg: number;
@@ -28,7 +29,7 @@ export const WindDirectionArrow: React.FC<WindDirectionArrowProps> = ({
     size={size}
     className={`shrink-0 ${transition ? 'transition-transform ease-out' : ''} ${className}`}
     style={{
-      transform: `rotate(${deg + 45}deg)`,
+      transform: `rotate(${windDegToRotation(deg)}deg)`,
       ...(transition ? { transitionDuration: `${durationMs}ms` } : {}),
     }}
     title={title ?? `Wind direction: ${Math.round(deg)}°`}

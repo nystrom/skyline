@@ -204,7 +204,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
     const compass = windDegToCompass(current.windDeg);
     const speed = convertWindSpeed(current.windSpeed, settings.windSpeedUnit);
     return {
-      label: `WIND ${compass}`,
+      label: 'WIND',
       value: `${speed} ${settings.windSpeedUnit}`,
     };
   };
