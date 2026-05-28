@@ -24,6 +24,7 @@ import type {
   StandardDailyPoint,
   StandardHourlyPoint,
 } from './sharedTypes';
+import { wmoCodeToKind, weatherKindToIcon } from './weatherKind';
 import { wmoToDesc, wmoToIcon } from './wmoUtils';
 
 function isObservedSlot(slot: RawHourlySlot): boolean {
@@ -86,11 +87,13 @@ export function mergeDailyLayers(layers: StandardDailyPoint[][]): StandardDailyP
 function rawSlotToStandard(slot: RawHourlySlot, interpolated: boolean): StandardHourlyPoint {
   const code = coalesceNumber(slot.weatherCode, 0);
   const isDay = slot.isDay === true;
+  const kind = slot.kind ?? wmoCodeToKind(code);
   return {
     time: slot.time,
     temp: coalesceNumber(slot.temp),
+    kind,
     description: slot.description ?? wmoToDesc(code),
-    iconName: slot.iconName ?? wmoToIcon(code, isDay),
+    iconName: slot.iconName ?? weatherKindToIcon(kind, isDay),
     windSpeed: coalesceNumber(slot.windSpeed),
     windDeg: coalesceNumber(slot.windDeg),
     precipProb: coalesceNumber(slot.precipProb),
@@ -202,12 +205,14 @@ export function interpolateHourlyGrid(
 
     const code = coalesceNumber(skySource?.weatherCode, 0);
     const isDay = skySource?.isDay === true;
+    const kind = skySource?.kind ?? wmoCodeToKind(code);
 
     result.push({
       time: new Date(t),
       temp,
+      kind,
       description: skySource?.description ?? dailyForDay?.description ?? wmoToDesc(code),
-      iconName: skySource?.iconName ?? dailyForDay?.iconName ?? wmoToIcon(code, isDay),
+      iconName: skySource?.iconName ?? dailyForDay?.iconName ?? weatherKindToIcon(kind, isDay),
       windSpeed,
       windDeg,
       precipProb: coalesceNumber(skySource?.precipProb, dailyForDay?.precipProb ?? 0),
@@ -362,10 +367,12 @@ export function mergeOpenMeteoHourlyRaw(
   return hourly.time.map((t: number, i: number) => {
     const code = hourly.weather_code?.[i];
     const isDay = hourly.is_day?.[i] === 1;
+    const kind = code != null ? wmoCodeToKind(code) : null;
     return {
       time: new Date(t * 1000),
       temp: hourly.temperature_2m?.[i] ?? null,
       weatherCode: code ?? null,
+      kind,
       description: code != null ? wmoToDescFn(code) : null,
       iconName: code != null ? wmoToIconFn(code, isDay) : null,
       isDay: hourly.is_day?.[i] === 1 ? true : hourly.is_day?.[i] === 0 ? false : null,

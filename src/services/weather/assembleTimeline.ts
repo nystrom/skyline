@@ -42,6 +42,7 @@ export function assembleTimelineAndForecasts(
         hourLabel: formatTime24AtLocation(pt.time, tz),
         type: 'hourly_status',
         title: `${Math.round(pt.temp)}°`,
+        kind: pt.kind,
         description: pt.description,
         iconName: pt.iconName,
         temp: Math.round(coalesceNumber(pt.temp)),

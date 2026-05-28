@@ -4,6 +4,7 @@
  */
 
 import type { CSSProperties } from 'react';
+import { WeatherKind } from '../services/weather/weatherKind';
 
 type Rgb = { r: number; g: number; b: number };
 
@@ -28,6 +29,35 @@ export type ConditionTintKind =
   | 'fog'
   | 'sand'
   | 'other';
+
+export function weatherKindToTintKind(kind: WeatherKind): ConditionTintKind {
+  switch (kind) {
+    case WeatherKind.Clear:
+    case WeatherKind.PartlyCloudy:
+      return 'clear';
+    case WeatherKind.Cloudy:
+      return 'cloud';
+    case WeatherKind.Fog:
+      return 'fog';
+    case WeatherKind.Sand:
+      return 'sand';
+    case WeatherKind.Thunderstorm:
+    case WeatherKind.ThunderstormHail:
+      return 'storm';
+    case WeatherKind.SnowLight:
+    case WeatherKind.SnowModerate:
+    case WeatherKind.SnowHeavy:
+    case WeatherKind.SnowShowers:
+    case WeatherKind.FreezingRain:
+      return 'snow';
+    case WeatherKind.Drizzle:
+    case WeatherKind.RainLight:
+    case WeatherKind.RainModerate:
+    case WeatherKind.RainHeavy:
+    case WeatherKind.Showers:
+      return 'rain';
+  }
+}
 
 export function conditionTintKind(iconName: string | undefined | null, description?: string | null): ConditionTintKind {
   const icon = normalizeText(iconName);

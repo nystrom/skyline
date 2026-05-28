@@ -3,18 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { wmoCodeToKind, weatherKindToIcon } from './weatherKind';
+
+export { wmoCodeToKind };
+
 export function wmoToIcon(code: number, isDay = true): string {
-  if (code === 0) return isDay ? 'sun' : 'moon';
-  if (code === 1 || code === 2 || code === 3) return 'cloud';
-  if (code === 45 || code === 48) return 'cloud';
-  if (code >= 51 && code <= 55) return 'cloud-rain';
-  if (code >= 61 && code <= 65) return 'cloud-rain';
-  if (code >= 66 && code <= 67) return 'snowflake';
-  if (code >= 71 && code <= 77) return 'snowflake';
-  if (code >= 80 && code <= 82) return 'cloud-rain';
-  if (code >= 85 && code <= 86) return 'snowflake';
-  if (code >= 95 && code <= 99) return 'cloud-lightning';
-  return 'cloud';
+  return weatherKindToIcon(wmoCodeToKind(code), isDay);
 }
 
 export function wmoToDesc(code: number): string {

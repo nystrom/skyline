@@ -4,10 +4,12 @@
  */
 
 import type { WeatherData, WeatherWarning } from '../../types';
+import type { WeatherKind } from './weatherKind';
 
 export interface StandardHourlyPoint {
   time: Date;
   temp: number;
+  kind: WeatherKind;
   description: string;
   iconName: string;
   windSpeed: number;
@@ -24,6 +26,7 @@ export interface StandardDailyPoint {
   date: Date;
   tempMin: number;
   tempMax: number;
+  kind: WeatherKind;
   description: string;
   iconName: string;
   precipProb: number;
@@ -43,6 +46,7 @@ export interface RawHourlySlot {
   time: Date;
   temp: number | null;
   weatherCode?: number | null;
+  kind?: WeatherKind | null;
   description?: string | null;
   iconName?: string | null;
   isDay?: boolean | null;

@@ -17,6 +17,7 @@ export interface WeatherTimelineEvent {
   time: Date;             // Exact date code of event
   hourLabel: string;      // E.g., "08:00" or "02:00 PM"
   type: 'now' | 'sunrise' | 'sunset' | 'moonrise' | 'moonset' | 'peak_temp' | 'wind_shift' | 'hourly_status';
+  kind?: import('./services/weather/weatherKind').WeatherKind; // Absent for astro/marker events
   title: string;
   description: string;
   iconName: string;       // Lucide icon key

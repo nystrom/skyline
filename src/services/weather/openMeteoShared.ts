@@ -10,6 +10,7 @@ import { buildForecast, mergeOpenMeteoHourlyRaw } from './forecastNormalize';
 import { getMoonriseMoonset } from './moonUtils';
 import { coalesceNumber } from './numbers';
 import type { ProviderRawBundle, StandardDailyPoint, WeatherLocationInput } from './sharedTypes';
+import { wmoCodeToKind } from './weatherKind';
 import { wmoToDesc, wmoToIcon } from './wmoUtils';
 
 const BASE_PARAMS =
@@ -65,6 +66,7 @@ function parseOpenMeteoRawBundle(
       date: d,
       tempMin: coalesceNumber(daily.temperature_2m_min[i], NaN),
       tempMax: coalesceNumber(daily.temperature_2m_max[i], NaN),
+      kind: wmoCodeToKind(coalesceNumber(daily.weather_code[i], 0)),
       description: wmoToDesc(coalesceNumber(daily.weather_code[i], 0)),
       iconName: wmoToIcon(coalesceNumber(daily.weather_code[i], 0), true),
       precipProb: coalesceNumber(daily.precipitation_probability_max[i]),
@@ -92,6 +94,7 @@ function parseOpenMeteoRawBundle(
         date: d,
         tempMin: ext.temp_min,
         tempMax: ext.temp_max,
+        kind: wmoCodeToKind(ext.weather_code),
         description: wmoToDesc(ext.weather_code),
         iconName: wmoToIcon(ext.weather_code, true),
         precipProb: ext.precip_prob || 0,

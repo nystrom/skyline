@@ -12,15 +12,10 @@ import { getMoonriseMoonset } from '../moonUtils';
 import type { ProviderFetchContext, ProviderRawBundle, RawHourlySlot, StandardDailyPoint, WeatherLocationInput } from '../sharedTypes';
 import type { WeatherProviderAdapter } from '../providerTypes';
 
+import { owIconToKind, weatherKindToIcon } from '../weatherKind';
+
 function iconMap(oWeatherIcon: string): string {
-  if (oWeatherIcon.startsWith('01')) return 'sun';
-  if (oWeatherIcon.startsWith('02')) return 'cloud';
-  if (oWeatherIcon.startsWith('03') || oWeatherIcon.startsWith('04')) return 'cloud';
-  if (oWeatherIcon.startsWith('09') || oWeatherIcon.startsWith('10')) return 'cloud-rain';
-  if (oWeatherIcon.startsWith('11')) return 'cloud-lightning';
-  if (oWeatherIcon.startsWith('13')) return 'snowflake';
-  if (oWeatherIcon.startsWith('50')) return 'cloud';
-  return 'cloud';
+  return weatherKindToIcon(owIconToKind(oWeatherIcon), oWeatherIcon.endsWith('d'));
 }
 
 async function fetchOpenWeatherRawBundle(
@@ -65,11 +60,13 @@ async function fetchOpenWeatherRawBundle(
     const snow = item.snow as Record<string, number> | undefined;
     const rainHour = rain?.['3h'] || rain?.['1h'] || 0;
     const snowHour = snow?.['3h'] || snow?.['1h'] || 0;
+    const owIcon = weather[0]?.icon || '01d';
     rawHourly.push({
       time: new Date((item.dt as number) * 1000),
       temp: main.temp,
+      kind: owIconToKind(owIcon),
       description: weather[0]?.main || 'Clear',
-      iconName: iconMap(weather[0]?.icon || '01d'),
+      iconName: iconMap(owIcon),
       windSpeed: wind.speed,
       windDeg: wind.deg,
       precipProb: ((item.pop as number) || 0) * 100,
@@ -123,12 +120,14 @@ async function fetchOpenWeatherRawBundle(
     const { moonriseTime, moonsetTime } = getMoonriseMoonset(dateObj, d);
     const repWeather = (repItem.weather as Array<{ description?: string; icon?: string }>) || [];
 
+    const repIcon = repWeather[0]?.icon || '01d';
     dailyPoints.push({
       date: dateObj,
       tempMin: tempMin === Infinity ? (currentData.main as { temp_min: number }).temp_min : tempMin,
       tempMax: tempMax === -Infinity ? (currentData.main as { temp_max: number }).temp_max : tempMax,
+      kind: owIconToKind(repIcon),
       description: repWeather[0]?.description || 'Clear sky',
-      iconName: iconMap(repWeather[0]?.icon || '01d'),
+      iconName: iconMap(repIcon),
       precipProb: maxPrecipProb * 100,
       precipAccum: totalPrecipAccum,
       windSpeed: totalWindSpeed / items.length,

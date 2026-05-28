@@ -18,14 +18,10 @@ function parseNWSWindDeg(dir: string): number {
   return NWS_WIND_DEG[dir.trim().toUpperCase()] ?? 0;
 }
 
+import { nwsUrlToKind, weatherKindToIcon } from '../weatherKind';
+
 function mapNWSIconToLucide(iconUrl: string, isDay = true): string {
-  if (iconUrl.includes('skc') || iconUrl.includes('few')) return isDay ? 'sun' : 'moon';
-  if (iconUrl.includes('sct') || iconUrl.includes('bkn') || iconUrl.includes('ovc')) return 'cloud';
-  if (iconUrl.includes('rain') || iconUrl.includes('drizzle')) return 'cloud-rain';
-  if (iconUrl.includes('tsra')) return 'cloud-lightning';
-  if (iconUrl.includes('snow') || iconUrl.includes('sleet') || iconUrl.includes('ice')) return 'snowflake';
-  if (iconUrl.includes('fog') || iconUrl.includes('haze')) return 'cloud';
-  return isDay ? 'sun' : 'moon';
+  return weatherKindToIcon(nwsUrlToKind(iconUrl), isDay);
 }
 
 async function fetchNWSRawBundle(location: WeatherLocationInput, signal?: AbortSignal): Promise<ProviderRawBundle> {
@@ -71,6 +67,7 @@ async function fetchNWSRawBundle(location: WeatherLocationInput, signal?: AbortS
     return {
       time: new Date(p.startTime as string),
       temp: p.temperature as number,
+      kind: nwsUrlToKind(p.icon as string),
       description: p.shortForecast as string,
       iconName: mapNWSIconToLucide(p.icon as string, isDay),
       isDay,
@@ -116,6 +113,7 @@ async function fetchNWSRawBundle(location: WeatherLocationInput, signal?: AbortS
       date: d,
       tempMin: minTemp,
       tempMax: p.temperature as number,
+      kind: nwsUrlToKind(p.icon as string),
       description: p.shortForecast as string,
       iconName: mapNWSIconToLucide(p.icon as string, true),
       precipProb: pop?.value || 0,
