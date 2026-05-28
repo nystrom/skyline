@@ -261,19 +261,19 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.22 }}
-            className="overflow-hidden mx-4 mt-2 rounded-2xl bg-slate-900 text-white"
+            className="overflow-hidden mx-4 mt-2 rounded-2xl bg-[color:var(--sky-surface)] text-[color:var(--sky-fg)] border border-[color:var(--sky-border)]"
           >
             <div className="p-4 space-y-3">
               {/* Header Bar */}
-              <div className="flex items-center justify-between pb-2 border-b border-white/10">
-                <span className="text-[10px] font-bold text-white/50 tracking-wider uppercase">
+              <div className="flex items-center justify-between pb-2 border-b border-[color:var(--sky-border)]">
+                <span className="text-[10px] font-bold text-[color:var(--sky-dim)] tracking-wider uppercase">
                   Settings
                 </span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={handleCancelSettings}
-                    className="p-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white rounded-lg transition cursor-pointer"
+                    className="p-1 bg-[color:var(--sky-card)] hover:bg-[color:var(--sky-card-2)] border border-[color:var(--sky-border)] text-[color:var(--sky-muted)] hover:text-[color:var(--sky-fg)] rounded-lg transition cursor-pointer"
                     title="Cancel changes (ESC)"
                     aria-label="Cancel settings changes"
                   >
@@ -291,16 +291,16 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
                 </div>
               </div>
 
-              <span className="text-[10px] font-bold text-white/50 tracking-wider uppercase block pt-1">
+              <span className="text-[10px] font-bold text-[color:var(--sky-dim)] tracking-wider uppercase block pt-1">
                 Display Options
               </span>
 
               <div className="flex items-center justify-between text-sm">
-                <span className="text-white/70 font-medium">Theme</span>
+                <span className="text-[color:var(--sky-muted)] font-medium">Theme</span>
                 <select
                   value={draftSettings.theme}
                   onChange={(e) => setDraftSettings(prev => ({ ...prev, theme: e.target.value as UserSettings['theme'] }))}
-                  className="bg-white/10 border border-white/15 rounded-xl text-sm px-3 py-1.5 text-white focus:outline-none cursor-pointer"
+                  className="bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-xl text-sm px-3 py-1.5 text-[color:var(--sky-fg)] focus:outline-none cursor-pointer"
                 >
                   <option value="system">System</option>
                   <option value="dark">Dark</option>
@@ -309,13 +309,13 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
               </div>
 
               <div className="flex items-center justify-between text-sm">
-                <span className="text-white/70 font-medium">Temperature</span>
-                <div className="flex gap-1 bg-white/10 p-0.5 rounded-lg">
+                <span className="text-[color:var(--sky-muted)] font-medium">Temperature</span>
+                <div className="flex gap-1 bg-[color:var(--sky-card)] p-0.5 rounded-lg">
                   <button
                     type="button"
                     onClick={() => setDraftSettings(prev => ({ ...prev, tempUnit: 'C' }))}
                     className={`px-3 py-1 rounded text-xs font-bold transition ${
-                      draftSettings.tempUnit === 'C' ? 'bg-white text-slate-900' : 'text-white/60 hover:text-white'
+                      draftSettings.tempUnit === 'C' ? 'bg-[color:var(--sky-fg)] text-[color:var(--sky-bg)]' : 'text-[color:var(--sky-dim)] hover:text-[color:var(--sky-fg)]'
                     }`}
                   >
                     °C
@@ -324,7 +324,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
                     type="button"
                     onClick={() => setDraftSettings(prev => ({ ...prev, tempUnit: 'F' }))}
                     className={`px-3 py-1 rounded text-xs font-bold transition ${
-                      draftSettings.tempUnit === 'F' ? 'bg-white text-slate-900' : 'text-white/60 hover:text-white'
+                      draftSettings.tempUnit === 'F' ? 'bg-[color:var(--sky-fg)] text-[color:var(--sky-bg)]' : 'text-[color:var(--sky-dim)] hover:text-[color:var(--sky-fg)]'
                     }`}
                   >
                     °F
@@ -333,7 +333,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
               </div>
 
               <div className="flex items-center justify-between text-sm">
-                <span className="text-white/70 font-medium">Wind Speed</span>
+                <span className="text-[color:var(--sky-muted)] font-medium">Wind Speed</span>
                 <select
                   value={draftSettings.windSpeedUnit}
                   onChange={(e) => setDraftSettings(prev => ({ ...prev, windSpeedUnit: e.target.value as any }))}
@@ -347,7 +347,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
               </div>
 
               <div className="flex items-center justify-between text-sm">
-                <span className="text-white/70 font-medium">Auto refresh</span>
+                <span className="text-[color:var(--sky-muted)] font-medium">Auto refresh</span>
                 <select
                   value={draftSettings.refreshIntervalMinutes}
                   onChange={(e) => setDraftSettings(prev => ({ ...prev, refreshIntervalMinutes: Number.parseInt(e.target.value, 10) }))}
@@ -362,13 +362,13 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
                 </select>
               </div>
 
-              <div className="space-y-2 border-t border-white/10 pt-3">
-                <span className="text-[10px] font-bold text-white/50 tracking-wider uppercase block">
+              <div className="space-y-2 border-t border-[color:var(--sky-border)] pt-3">
+                <span className="text-[10px] font-bold text-[color:var(--sky-dim)] tracking-wider uppercase block">
                   Timeline Astro Events
                 </span>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-white/70">Sunrise / Sunset</span>
+                  <span className="text-[color:var(--sky-muted)]">Sunrise / Sunset</span>
                   <label className="relative inline-flex items-center cursor-pointer select-none">
                     <input
                       type="checkbox"
@@ -376,12 +376,12 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
                       onChange={(e) => setDraftSettings(prev => ({ ...prev, showSunriseSunset: e.target.checked }))}
                       className="sr-only peer"
                     />
-                    <div className="w-8 h-4 bg-white/15 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white/80 after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-sky-500" />
+                    <div className="w-8 h-4 bg-[color:var(--sky-card-2)] rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-[color:var(--sky-fg)] after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-sky-500" />
                   </label>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-white/70">Moonrise / Moonset</span>
+                  <span className="text-[color:var(--sky-muted)]">Moonrise / Moonset</span>
                   <label className="relative inline-flex items-center cursor-pointer select-none">
                     <input
                       type="checkbox"
@@ -389,19 +389,19 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
                       onChange={(e) => setDraftSettings(prev => ({ ...prev, showMoonriseMoonset: e.target.checked }))}
                       className="sr-only peer"
                     />
-                    <div className="w-8 h-4 bg-white/15 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white/80 after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-sky-500" />
+                    <div className="w-8 h-4 bg-[color:var(--sky-card-2)] rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-[color:var(--sky-fg)] after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-sky-500" />
                   </label>
                 </div>
               </div>
 
-              <div className="border-t border-white/10 pt-3 space-y-3">
-                <span className="text-[10px] font-bold text-white/50 tracking-wider uppercase block">
+              <div className="border-t border-[color:var(--sky-border)] pt-3 space-y-3">
+                <span className="text-[10px] font-bold text-[color:var(--sky-dim)] tracking-wider uppercase block">
                   Advanced
                 </span>
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-white/70 font-medium">Weather Provider</span>
+                    <span className="text-[color:var(--sky-muted)] font-medium">Weather Provider</span>
                     <select
                       value={draftSettings.provider}
                       onChange={(e) => setDraftSettings(prev => ({ ...prev, provider: e.target.value as any }))}
@@ -416,9 +416,9 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
                   </div>
                 </div>
 
-                <div className="space-y-2 border-t border-white/10 pt-3">
+                <div className="space-y-2 border-t border-[color:var(--sky-border)] pt-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-white/60">OpenWeather API Key</span>
+                    <span className="text-xs font-semibold text-[color:var(--sky-muted)]">OpenWeather API Key</span>
                     {draftSettings.apiKey && (
                       <button
                         type="button"
@@ -434,7 +434,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
                     placeholder="Paste API key..."
                     value={draftSettings.apiKey}
                     onChange={(e) => setDraftSettings(prev => ({ ...prev, apiKey: e.target.value.trim() }))}
-                    className="w-full text-sm bg-white/10 border border-white/15 rounded-xl px-3 py-2 text-white placeholder-white/30 focus:outline-none"
+                    className="w-full text-sm bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-xl px-3 py-2 text-[color:var(--sky-fg)] placeholder-[color:var(--sky-dim)] focus:outline-none"
                   />
                 </div>
               </div>

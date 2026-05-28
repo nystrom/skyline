@@ -199,10 +199,9 @@ export const LocationsScreen: React.FC<LocationsScreenProps> = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: '30px' }}
       transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-      className="absolute inset-0 z-50 flex flex-col p-6 overflow-hidden rounded-b-2xl md:rounded-3xl border border-white/10 backdrop-blur-md"
+      className="absolute inset-0 z-50 flex flex-col p-6 overflow-hidden rounded-b-2xl md:rounded-3xl border border-[color:var(--sky-border)] backdrop-blur-md"
       style={{
-        background:
-          'radial-gradient(900px 620px at 20% 20%, rgba(124,246,255,0.14), transparent 58%), radial-gradient(900px 620px at 82% 30%, rgba(124,255,183,0.11), transparent 60%), linear-gradient(180deg, var(--sky-bg), var(--sky-bg-2))',
+        background: 'linear-gradient(180deg, var(--sky-bg), var(--sky-bg-2))',
       }}
     >
       {/* Header Bar */}
@@ -215,7 +214,7 @@ export const LocationsScreen: React.FC<LocationsScreenProps> = ({
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white rounded-xl transition cursor-pointer"
+          className="p-1.5 bg-[color:var(--sky-card)] hover:bg-[color:var(--sky-card-2)] border border-[color:var(--sky-border)] text-[color:var(--sky-muted)] hover:text-[color:var(--sky-fg)] rounded-xl transition cursor-pointer"
           title="Dismiss Selector"
           aria-label="Close location selector"
         >
@@ -234,21 +233,21 @@ export const LocationsScreen: React.FC<LocationsScreenProps> = ({
         className="mb-3 flex gap-1.5 shrink-0"
       >
         <div className="relative flex-1">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--sky-dim)] pointer-events-none" />
           <input
             id="locations-screen-city-input"
             type="text"
             placeholder="Enter city (e.g., Zurich, London...)"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="w-full text-sm pl-9 pr-8 py-2.5 bg-black/25 border border-white/10 rounded-xl text-[color:var(--sky-fg)] placeholder-white/35 focus:outline-none focus:border-[color:rgba(124,246,255,0.55)] focus:ring-1 focus:ring-[color:rgba(124,246,255,0.20)]"
+            className="w-full text-sm pl-9 pr-8 py-2.5 bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-xl text-[color:var(--sky-fg)] placeholder-[color:var(--sky-dim)] focus:outline-none focus:border-[color:var(--sky-accent)] focus:ring-1 focus:ring-[color:var(--sky-accent)]"
             autoFocus
           />
           {searchInput && (
             <button
               type="button"
               onClick={() => setSearchInput('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 cursor-pointer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--sky-dim)] hover:text-[color:var(--sky-muted)] cursor-pointer"
             >
               <X size={14} />
             </button>
@@ -264,14 +263,14 @@ export const LocationsScreen: React.FC<LocationsScreenProps> = ({
 
       {/* Search Results Area */}
       {searchInput.trim().length > 2 && (
-        <div className="mb-4 shrink-0 max-h-48 overflow-y-auto scrollbar-none space-y-1 border border-white/10 rounded-xl p-1.5 bg-white/5">
-          <span className="text-[10px] text-white/55 sky-mono tracking-wider uppercase px-2 block mb-1">
+        <div className="mb-4 shrink-0 max-h-48 overflow-y-auto scrollbar-none space-y-1 border border-[color:var(--sky-border)] rounded-xl p-1.5 bg-[color:var(--sky-card)]">
+          <span className="text-[10px] text-[color:var(--sky-dim)] sky-mono tracking-wider uppercase px-2 block mb-1">
             Matching locations
           </span>
           {isSearching && searchResults.length === 0 && !searchError ? (
             <div className="text-center py-4">
               <RefreshCw size={18} className="text-[color:var(--sky-accent)] animate-spin mx-auto mb-1" />
-              <p className="text-[10px] text-white/45 sky-mono">Searching...</p>
+              <p className="text-[10px] text-[color:var(--sky-dim)] sky-mono">Searching...</p>
             </div>
           ) : searchError ? (
             <div className="text-center py-3 px-2">
@@ -279,7 +278,7 @@ export const LocationsScreen: React.FC<LocationsScreenProps> = ({
             </div>
           ) : searchResults.length === 0 ? (
             <div className="text-center py-3 px-2">
-              <p className="text-xs text-white/45">No matches found.</p>
+              <p className="text-xs text-[color:var(--sky-dim)]">No matches found.</p>
             </div>
           ) : (
             searchResults.map((loc, idx) => {
@@ -292,14 +291,14 @@ export const LocationsScreen: React.FC<LocationsScreenProps> = ({
                   className={`group flex items-center justify-between p-2.5 rounded-xl cursor-pointer border transition-all duration-150 ${
                     isCurrent
                       ? 'bg-[color:rgba(124,246,255,0.12)] border-[color:rgba(124,246,255,0.35)]'
-                      : 'bg-black/20 border-transparent hover:border-white/15'
+                      : 'bg-[color:var(--sky-card)] border-transparent hover:border-[color:var(--sky-border)]'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <MapPin size={13} className="text-white/55 shrink-0" />
+                    <MapPin size={13} className="text-[color:var(--sky-dim)] shrink-0" />
                     <div className="text-left min-w-0">
                       <span className="text-xs font-bold text-[color:var(--sky-fg)] block truncate">{loc.name}</span>
-                      <span className="text-[10px] text-white/55 block truncate">
+                      <span className="text-[10px] text-[color:var(--sky-dim)] block truncate">
                         {loc.state ? `${loc.state}, ` : ''}
                         {loc.country}
                       </span>
@@ -315,7 +314,7 @@ export const LocationsScreen: React.FC<LocationsScreenProps> = ({
 
       {/* Saved Locations Area */}
       <div className="flex-1 flex flex-col min-h-0">
-        <span className="text-[10px] text-white/55 sky-mono tracking-wider uppercase mb-2">
+        <span className="text-[10px] text-[color:var(--sky-dim)] sky-mono tracking-wider uppercase mb-2">
           Saved locations · {savedLocations.length}
         </span>
 
@@ -335,20 +334,20 @@ export const LocationsScreen: React.FC<LocationsScreenProps> = ({
                   onClick={() => selectLocation(loc)}
                   className={`group flex items-center justify-between p-3 rounded-2xl cursor-pointer border transition-all duration-150 ${
                     isCurrent
-                      ? 'bg-[color:rgba(124,255,183,0.12)] border-[color:rgba(124,255,183,0.34)] text-[color:rgba(190,255,224,0.95)]'
-                      : 'bg-white/5 border-transparent hover:border-white/12 text-white/70 hover:text-white'
+                      ? 'bg-[color:rgba(124,255,183,0.12)] border-[color:rgba(124,255,183,0.34)] text-[color:var(--sky-fg)]'
+                      : 'bg-[color:var(--sky-card)] border-transparent hover:border-[color:var(--sky-border)] text-[color:var(--sky-muted)] hover:text-[color:var(--sky-fg)]'
                   }`}
                 >
                   <span className="text-xs font-bold capitalize select-none truncate pr-2">{displayLabel}</span>
                   <div className="flex items-center gap-2 shrink-0">
                     {isCurrent && (
-                      <span className="text-[8px] bg-white/8 text-[color:var(--sky-accent-2)] sky-mono font-black px-1.5 py-0.5 rounded leading-none">
+                      <span className="text-[8px] bg-[color:var(--sky-card-2)] text-[color:var(--sky-accent-2)] sky-mono font-black px-1.5 py-0.5 rounded leading-none">
                         ACTIVE
                       </span>
                     )}
                     <button
                       onClick={(e) => handleDeleteSavedLocation(e, loc)}
-                      className="p-1 hover:bg-[color:rgba(255,107,134,0.14)] text-white/40 hover:text-[color:var(--sky-danger)] rounded-lg transition duration-150 cursor-pointer"
+                      className="p-1 hover:bg-[color:rgba(255,107,134,0.14)] text-[color:var(--sky-dim)] hover:text-[color:var(--sky-danger)] rounded-lg transition duration-150 cursor-pointer"
                       title={`Remove ${displayLabel} from list`}
                     >
                       <Trash2 size={13} />
@@ -362,11 +361,11 @@ export const LocationsScreen: React.FC<LocationsScreenProps> = ({
       </div>
 
       {/* GPS Detection Footer */}
-      <div className="pt-3 border-t border-white/10 shrink-0 mt-3">
+      <div className="pt-3 border-t border-[color:var(--sky-border)] shrink-0 mt-3">
         <button
           type="button"
           onClick={handleUseGeolocation}
-          className="w-full py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/85 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+          className="w-full py-2.5 bg-[color:var(--sky-card)] hover:bg-[color:var(--sky-card-2)] border border-[color:var(--sky-border)] text-[color:var(--sky-fg)] rounded-2xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
         >
           <MapPin size={14} className="text-[color:var(--sky-accent)] animate-bounce" />
           Detect My GPS Coordinates

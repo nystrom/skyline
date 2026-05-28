@@ -315,14 +315,14 @@ export function buildForecast(input: ForecastBuildInput): ForecastBuildResult {
   const now = new Date();
   const warnings = input.warnings || [];
 
-  const currentWarnings = warnings.filter((w) => w.starts <= now && now <= w.ends);
+  const currentWarnings = warnings.filter((w) => w.starts <= now && now < w.ends);
   const currentWithWarnings = {
     ...input.current,
     warnings: currentWarnings.length > 0 ? currentWarnings : undefined,
   };
 
   const hourlyWithWarnings = hourly.map((h) => {
-    const activeWarnings = warnings.filter((w) => w.starts <= h.time && h.time <= w.ends);
+    const activeWarnings = warnings.filter((w) => w.starts <= h.time && h.time < w.ends);
     return {
       ...h,
       warnings: activeWarnings.length > 0 ? activeWarnings : undefined,
