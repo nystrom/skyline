@@ -13,7 +13,7 @@ export function wmoToIcon(code: number, isDay = true): string {
 
 export function wmoToDesc(code: number): string {
   if (code === 0) return 'Clear sky';
-  if (code === 1) return 'Mainly clear';
+  if (code === 1) return 'Scattered clouds';
   if (code === 2) return 'Partly cloudy';
   if (code === 3) return 'Overcast';
   if (code === 45) return 'Fog';

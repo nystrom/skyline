@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Flame, Sunrise, Sunset, Moon, Wind } from 'lucide-react';
-import { DailyForecast, UserSettings, WeatherTimelineEvent } from '../types';
+import { Flame, Sunrise, Sunset, Moon, Wind, AlertTriangle } from 'lucide-react';
+import { DailyForecast, UserSettings, WeatherTimelineEvent, WeatherWarning } from '../types';
 import { WeatherIcon } from './WeatherIcon';
 import { WindDirectionArrow } from './WindDirectionArrow';
 import { convertTemp, convertWindSpeed, formatTimeAtLocation } from '../utils/unitConverter';
@@ -19,6 +19,7 @@ interface WeatherTimelineProps {
   scrollSpyBlockedRef?: React.RefObject<boolean>;
   timeZone?: string;
   timeZoneOffsetMinutes?: number;
+  onShowWarnings?: (warnings: WeatherWarning[]) => void;
 }
 
 type TZ = { timeZone?: string; offsetMinutes?: number };
@@ -213,9 +214,10 @@ interface HourlyRowProps {
   event: WeatherTimelineEvent;
   settings: UserSettings;
   tz: TZ;
+  onShowWarnings?: (warnings: WeatherWarning[]) => void;
 }
 
-const HourlyRow: React.FC<HourlyRowProps> = ({ event, settings, tz }) => {
+const HourlyRow: React.FC<HourlyRowProps> = ({ event, settings, tz, onShowWarnings }) => {
   const rowStyle = conditionRowStyle(event.iconName, event.description, event.precipProb);
   const showRain = (event.precipProb ?? 0) > 5;
 
@@ -242,6 +244,18 @@ const HourlyRow: React.FC<HourlyRowProps> = ({ event, settings, tz }) => {
             <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] capitalize truncate leading-tight">
               {event.description}
             </span>
+            {event.warnings && event.warnings.length > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShowWarnings?.(event.warnings || []);
+                }}
+                className="text-red-500 hover:text-red-400 cursor-pointer focus:outline-none flex items-center justify-center p-0.5 rounded-full hover:bg-red-500/10 transition-colors shrink-0"
+                aria-label="Show warnings"
+              >
+                <AlertTriangle size={13} />
+              </button>
+            )}
           </div>
           {showRain && (
             <span className="text-[11px] sky-mono text-[color:var(--sky-dim)] mt-[2px] block">
@@ -255,17 +269,18 @@ const HourlyRow: React.FC<HourlyRowProps> = ({ event, settings, tz }) => {
   );
 };
 
-/* ── Merged block for consecutive same-condition hours ── */
 interface MergedCardProps {
   events: WeatherTimelineEvent[];
   settings: UserSettings;
   tz: TZ;
+  onShowWarnings?: (warnings: WeatherWarning[]) => void;
 }
 
-const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz }) => {
+const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWarnings }) => {
   const first = events[0];
   const rowStyle = conditionRowStyle(first.iconName, first.description, first.precipProb);
   const showRain = (first.precipProb ?? 0) > 5;
+  const hasWarnings = events.some((e) => e.warnings && e.warnings.length > 0);
 
   return (
     <div className="border-b border-black/[0.04]" style={rowStyle}>
@@ -291,6 +306,29 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz }) => {
               <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] capitalize truncate">
                 {first.description}
               </span>
+              {hasWarnings && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const allWarnings: WeatherWarning[] = [];
+                    const seenKeys = new Set<string>();
+                    events.forEach((evt) => {
+                      (evt.warnings || []).forEach((w) => {
+                        const key = `${w.sender}:${w.event}:${w.starts.getTime()}:${w.ends.getTime()}`;
+                        if (!seenKeys.has(key)) {
+                          seenKeys.add(key);
+                          allWarnings.push(w);
+                        }
+                      });
+                    });
+                    onShowWarnings?.(allWarnings);
+                  }}
+                  className="text-red-500 hover:text-red-400 cursor-pointer focus:outline-none flex items-center justify-center p-0.5 rounded-full hover:bg-red-500/10 transition-colors shrink-0"
+                  aria-label="Show warnings"
+                >
+                  <AlertTriangle size={13} />
+                </button>
+              )}
               {showRain && (
                 <span className="text-[11px] sky-mono text-[color:var(--sky-dim)] shrink-0">
                   {first.precipProb}% rain
@@ -437,6 +475,7 @@ export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
   scrollSpyBlockedRef,
   timeZone,
   timeZoneOffsetMinutes,
+  onShowWarnings,
 }) => {
   const activeDayRef = useRef(activeDayIdx);
   const tz: TZ = { timeZone, offsetMinutes: timeZoneOffsetMinutes };
@@ -466,7 +505,15 @@ export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
     const evt = item.events[0];
 
     if (item.type === 'merged') {
-      return <MergedCard key={evt.id} events={item.events} settings={settings} tz={tz} />;
+      return (
+        <MergedCard
+          key={evt.id}
+          events={item.events}
+          settings={settings}
+          tz={tz}
+          onShowWarnings={onShowWarnings}
+        />
+      );
     }
 
     if (INSTANT_TYPES.has(evt.type)) {
@@ -479,7 +526,15 @@ export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
       return <InstantRow key={evt.id} event={evt} settings={settings} tz={tz} />;
     }
 
-    return <HourlyRow key={evt.id} event={evt} settings={settings} tz={tz} />;
+    return (
+      <HourlyRow
+        key={evt.id}
+        event={evt}
+        settings={settings}
+        tz={tz}
+        onShowWarnings={onShowWarnings}
+      />
+    );
   };
 
   return (

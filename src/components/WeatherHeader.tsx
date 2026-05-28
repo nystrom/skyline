@@ -4,9 +4,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { WeatherData, UserSettings, DataSource } from '../types';
+import { WeatherData, UserSettings, DataSource, WeatherWarning } from '../types';
 import { WeatherIcon } from './WeatherIcon';
-import { Settings, Info, RefreshCw, X, Check } from 'lucide-react';
+import { Settings, Info, RefreshCw, X, Check, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   convertTemp,
@@ -30,6 +30,7 @@ interface WeatherHeaderProps {
   dataSource: DataSource;
   onSelectNow?: () => void;
   onOpenLocations: () => void;
+  onShowWarnings?: (warnings: WeatherWarning[]) => void;
 }
 
 export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
@@ -45,6 +46,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
   dataSource,
   onSelectNow,
   onOpenLocations,
+  onShowWarnings,
 }) => {
   const tz = {
     timeZone: weatherData.timeZone,
@@ -497,8 +499,20 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
         <div className="text-[76px] leading-none font-black tracking-tighter sky-title text-[color:var(--sky-fg)] tabular-nums">
           {convertTemp(current.temp, settings.tempUnit)}°
         </div>
-        <div className="pb-3">
+        <div className="pb-3 flex items-center gap-2">
           <WeatherIcon name={current.iconName} size={46} className="text-amber-400" />
+          {current.warnings && current.warnings.length > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onShowWarnings?.(current.warnings || []);
+              }}
+              className="text-red-500 hover:text-red-400 cursor-pointer animate-pulse focus:outline-none flex items-center justify-center p-1 rounded-full hover:bg-red-500/10 transition-colors"
+              aria-label="Show active warnings"
+            >
+              <AlertTriangle size={24} />
+            </button>
+          )}
         </div>
       </div>
 

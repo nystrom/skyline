@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { UserSettings, WeatherData, WeatherProvider, SavedLocation, DataSource } from './types';
+import { UserSettings, WeatherData, WeatherProvider, SavedLocation, DataSource, WeatherWarning } from './types';
 import { fetchWeatherForLocation } from './services/weather/weatherOrchestrator';
 import { geocodeLocation } from './services/geocoding/geocodingService';
 import { isApiKeyValid } from './services/validation';
@@ -14,7 +14,8 @@ import { DailyScroller } from './components/DailyScroller';
 import { WeatherTimeline } from './components/WeatherTimeline';
 import { WeatherIcon } from './components/WeatherIcon';
 import { LocationsScreen } from './components/LocationsScreen';
-import { AnimatePresence } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
+import { AlertTriangle, X } from 'lucide-react';
 
 const ACTIVE_LOCATION_KEY = 'sky_timeline_active_location';
 const THEME_KEY = 'sky_timeline_theme';
@@ -105,6 +106,7 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [activeDayIdx, setActiveDayIdx] = useState(0);
   const [activeScreen, setActiveScreen] = useState<'home' | 'locations'>('home');
+  const [selectedWarnings, setSelectedWarnings] = useState<WeatherWarning[] | null>(null);
   const loadAbortRef = useRef<AbortController | null>(null);
   const scrollSpyBlockedRef = useRef(false);
   const topStackRef = useRef<HTMLDivElement>(null);
@@ -349,6 +351,7 @@ export default function App() {
                   dataSource={dataSource}
                   onSelectNow={handleSelectNow}
                   onOpenLocations={() => setActiveScreen('locations')}
+                  onShowWarnings={(warnings) => setSelectedWarnings(warnings)}
                 />
                 <DailyScroller
                   daily={displayData.daily}
@@ -366,6 +369,7 @@ export default function App() {
                 scrollSpyBlockedRef={scrollSpyBlockedRef}
                 timeZone={displayData.timeZone}
                 timeZoneOffsetMinutes={displayData.timeZoneOffsetMinutes}
+                onShowWarnings={(warnings) => setSelectedWarnings(warnings)}
               />
             </div>
           ) : (
@@ -385,6 +389,71 @@ export default function App() {
                 updateSettings={updateSettings}
                 onClose={() => setActiveScreen('home')}
               />
+            )}
+          </AnimatePresence>
+          <AnimatePresence>
+            {selectedWarnings && selectedWarnings.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setSelectedWarnings(null)}
+                className="absolute inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4"
+              >
+                <motion.div
+                  initial={{ scale: 0.95, y: 15 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.95, y: 15 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-[color:var(--sky-bg)] border border-[color:var(--sky-border)] w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col max-h-[70%] overflow-hidden relative"
+                >
+                  <div className="flex items-center justify-between pb-4 border-b border-[color:var(--sky-border)] shrink-0">
+                    <div className="flex items-center gap-2 text-red-500">
+                      <AlertTriangle size={20} className="animate-pulse" />
+                      <span className="sky-title text-base font-black tracking-tight uppercase">
+                        Weather Alerts
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setSelectedWarnings(null)}
+                      className="p-1 rounded-full hover:bg-[color:var(--sky-card)] text-[color:var(--sky-muted)] cursor-pointer"
+                      aria-label="Close warnings"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto pt-4 space-y-4 pr-1 scrollbar-none">
+                    {selectedWarnings.map((w, idx) => (
+                      <div key={idx} className="bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-2xl p-4 space-y-2">
+                        <div className="flex justify-between items-start gap-2">
+                          <h4 className="text-red-500 font-extrabold text-[14px] leading-tight capitalize">
+                            {w.event}
+                          </h4>
+                          {w.severity && w.severity !== 'unknown' && (
+                            <span className={`text-[8px] font-extrabold tracking-widest uppercase sky-mono px-1.5 py-0.5 rounded border ${
+                              w.severity === 'extreme' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                              w.severity === 'severe' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
+                              'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                            }`}>
+                              {w.severity}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] sky-mono text-[color:var(--sky-dim)] leading-tight">
+                          Issued by: {w.sender || 'Unknown Agency'}
+                        </p>
+                        <p className="text-[10px] sky-mono text-[color:var(--sky-dim)] leading-tight">
+                          {w.starts.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {w.ends.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </p>
+                        <div className="text-[12px] font-medium leading-relaxed text-[color:var(--sky-fg)] whitespace-pre-wrap pt-2 border-t border-[color:var(--sky-border)]/50">
+                          {w.description}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              </motion.div>
             )}
           </AnimatePresence>
         </div>
