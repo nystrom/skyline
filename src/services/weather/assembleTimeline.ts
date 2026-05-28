@@ -5,14 +5,22 @@
 
 import type { DailyForecast, WeatherTimelineEvent } from '../../types';
 import type { StandardDailyPoint, StandardHourlyPoint } from './sharedTypes';
-import { formatTime24 } from '../../utils/unitConverter';
+import {
+  formatDateLongAtLocation,
+  formatShortDateAtLocation,
+  formatTime24AtLocation,
+  formatWeekdayAtLocation,
+} from '../../utils/unitConverter';
 import { coalesceNumber } from './numbers';
 
 export function assembleTimelineAndForecasts(
   currentTemp: number,
   hourlyPoints: StandardHourlyPoint[],
-  dailyPoints: StandardDailyPoint[]
+  dailyPoints: StandardDailyPoint[],
+  timeZone?: string,
+  timeZoneOffsetMinutes?: number
 ): DailyForecast[] {
+  const tz = { timeZone, offsetMinutes: timeZoneOffsetMinutes };
   const dailyForecasts: DailyForecast[] = [];
   const groupedHourly: Record<string, StandardHourlyPoint[]> = {};
   hourlyPoints.forEach((pt) => {
@@ -30,7 +38,7 @@ export function assembleTimelineAndForecasts(
       timelineEvents.push({
         id: `event-${dIdx}-hour-${hIdx}`,
         time: pt.time,
-        hourLabel: formatTime24(pt.time),
+        hourLabel: formatTime24AtLocation(pt.time, tz),
         type: 'hourly_status',
         title: `${Math.round(pt.temp)}°`,
         description: pt.description,
@@ -48,7 +56,7 @@ export function assembleTimelineAndForecasts(
     timelineEvents.push({
       id: `event-${dIdx}-sunrise`,
       time: day.sunrise,
-      hourLabel: formatTime24(day.sunrise),
+      hourLabel: formatTime24AtLocation(day.sunrise, tz),
       type: 'sunrise',
       title: 'Sunrise',
       description: 'First rays break above horizon lines',
@@ -60,7 +68,7 @@ export function assembleTimelineAndForecasts(
     timelineEvents.push({
       id: `event-${dIdx}-sunset`,
       time: day.sunset,
-      hourLabel: formatTime24(day.sunset),
+      hourLabel: formatTime24AtLocation(day.sunset, tz),
       type: 'sunset',
       title: 'Sunset',
       description: 'Twilight color gradient fadeout',
@@ -73,7 +81,7 @@ export function assembleTimelineAndForecasts(
       timelineEvents.push({
         id: `event-${dIdx}-moonrise`,
         time: day.moonrise,
-        hourLabel: formatTime24(day.moonrise),
+        hourLabel: formatTime24AtLocation(day.moonrise, tz),
         type: 'moonrise',
         title: 'Moonrise',
         description: 'The moon ascends into the twilight canopy',
@@ -86,7 +94,7 @@ export function assembleTimelineAndForecasts(
       timelineEvents.push({
         id: `event-${dIdx}-moonset`,
         time: day.moonset,
-        hourLabel: formatTime24(day.moonset),
+        hourLabel: formatTime24AtLocation(day.moonset, tz),
         type: 'moonset',
         title: 'Moonset',
         description: 'The lunar disc slips below the horizon',
@@ -100,7 +108,7 @@ export function assembleTimelineAndForecasts(
       timelineEvents.push({
         id: `event-${dIdx}-peak`,
         time: day.peakTempTime,
-        hourLabel: formatTime24(day.peakTempTime),
+        hourLabel: formatTime24AtLocation(day.peakTempTime, tz),
         type: 'peak_temp',
         title: `Daily Peak: ${Math.round(day.tempMax)}°`,
         description: 'Solar heat peak of this forecast block',
@@ -120,7 +128,7 @@ export function assembleTimelineAndForecasts(
         timelineEvents.push({
           id: `event-${dIdx}-windshift`,
           time: dayHours[i].time,
-          hourLabel: formatTime24(dayHours[i].time),
+          hourLabel: formatTime24AtLocation(dayHours[i].time, tz),
           type: 'wind_shift',
           title: 'Breeze Vector Shift',
           description: 'Wind shifts direction',
@@ -141,7 +149,7 @@ export function assembleTimelineAndForecasts(
       timelineEvents.push({
         id: 'event-0-now',
         time: liveNow,
-        hourLabel: formatTime24(liveNow),
+        hourLabel: formatTime24AtLocation(liveNow, tz),
         type: 'now',
         title: 'Current Conditions',
         description: 'You are right here',
@@ -156,8 +164,8 @@ export function assembleTimelineAndForecasts(
 
     dailyForecasts.push({
       date: day.date,
-      dayName: day.date.toLocaleDateString('en-US', { weekday: 'long' }),
-      shortDate: day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      dayName: formatWeekdayAtLocation(day.date, tz),
+      shortDate: formatShortDateAtLocation(day.date, tz),
       tempMin: Math.round(day.tempMin),
       tempMax: Math.round(day.tempMax),
       iconName: day.iconName,

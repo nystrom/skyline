@@ -55,6 +55,65 @@ export function formatTime24(date: Date): string {
   return date.toLocaleTimeString('en-US', TIME_24H);
 }
 
+function toOffsetDate(date: Date, offsetMinutes: number): Date {
+  return new Date(date.getTime() + offsetMinutes * 60_000);
+}
+
+export function formatTime24AtLocation(
+  date: Date,
+  opts: { timeZone?: string; offsetMinutes?: number }
+): string {
+  if (opts.timeZone) {
+    return date.toLocaleTimeString('en-US', { ...TIME_24H, timeZone: opts.timeZone });
+  }
+  if (typeof opts.offsetMinutes === 'number') {
+    return toOffsetDate(date, opts.offsetMinutes).toLocaleTimeString('en-US', { ...TIME_24H, timeZone: 'UTC' });
+  }
+  return formatTime24(date);
+}
+
+export function formatDateLongAtLocation(
+  date: Date,
+  opts: { timeZone?: string; offsetMinutes?: number }
+): string {
+  const fmt: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'short', day: 'numeric' };
+  if (opts.timeZone) {
+    return date.toLocaleDateString('en-US', { ...fmt, timeZone: opts.timeZone });
+  }
+  if (typeof opts.offsetMinutes === 'number') {
+    return toOffsetDate(date, opts.offsetMinutes).toLocaleDateString('en-US', { ...fmt, timeZone: 'UTC' });
+  }
+  return date.toLocaleDateString('en-US', fmt);
+}
+
+export function formatWeekdayAtLocation(
+  date: Date,
+  opts: { timeZone?: string; offsetMinutes?: number }
+): string {
+  const fmt: Intl.DateTimeFormatOptions = { weekday: 'long' };
+  if (opts.timeZone) {
+    return date.toLocaleDateString('en-US', { ...fmt, timeZone: opts.timeZone });
+  }
+  if (typeof opts.offsetMinutes === 'number') {
+    return toOffsetDate(date, opts.offsetMinutes).toLocaleDateString('en-US', { ...fmt, timeZone: 'UTC' });
+  }
+  return date.toLocaleDateString('en-US', fmt);
+}
+
+export function formatShortDateAtLocation(
+  date: Date,
+  opts: { timeZone?: string; offsetMinutes?: number }
+): string {
+  const fmt: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  if (opts.timeZone) {
+    return date.toLocaleDateString('en-US', { ...fmt, timeZone: opts.timeZone });
+  }
+  if (typeof opts.offsetMinutes === 'number') {
+    return toOffsetDate(date, opts.offsetMinutes).toLocaleDateString('en-US', { ...fmt, timeZone: 'UTC' });
+  }
+  return date.toLocaleDateString('en-US', fmt);
+}
+
 export function formatTime(date: Date, format: '12h' | '24h'): string {
   if (format === '24h') {
     return formatTime24(date);
@@ -64,4 +123,30 @@ export function formatTime(date: Date, format: '12h' | '24h'): string {
     minute: '2-digit',
     hour12: true,
   });
+}
+
+export function formatTimeAtLocation(
+  date: Date,
+  format: '12h' | '24h',
+  opts: { timeZone?: string; offsetMinutes?: number }
+): string {
+  if (format === '24h') return formatTime24AtLocation(date, opts);
+
+  if (opts.timeZone) {
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: opts.timeZone,
+    });
+  }
+  if (typeof opts.offsetMinutes === 'number') {
+    return toOffsetDate(date, opts.offsetMinutes).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'UTC',
+    });
+  }
+  return formatTime(date, format);
 }

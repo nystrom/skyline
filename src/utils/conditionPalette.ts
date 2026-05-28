@@ -1,0 +1,102 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import type { CSSProperties } from 'react';
+
+type Rgb = { r: number; g: number; b: number };
+
+function clampByte(n: number): number {
+  return Math.max(0, Math.min(255, Math.round(n)));
+}
+
+function rgb(r: number, g: number, b: number): Rgb {
+  return { r: clampByte(r), g: clampByte(g), b: clampByte(b) };
+}
+
+function normalizeText(s: string | undefined | null): string {
+  return (s ?? '').trim().toLowerCase();
+}
+
+export type ConditionTintKind =
+  | 'clear'
+  | 'cloud'
+  | 'rain'
+  | 'storm'
+  | 'snow'
+  | 'fog'
+  | 'sand'
+  | 'other';
+
+export function conditionTintKind(iconName: string | undefined | null, description?: string | null): ConditionTintKind {
+  const icon = normalizeText(iconName);
+  const desc = normalizeText(description);
+
+  if (desc.includes('sand') || desc.includes('dust') || desc.includes('sahara')) return 'sand';
+  if (desc.includes('fog') || desc.includes('mist') || desc.includes('haze') || desc.includes('smoke')) return 'fog';
+
+  if (icon.includes('lightning') || icon.includes('bolt') || icon.includes('storm') || icon.includes('ts')) return 'storm';
+  if (icon.includes('snow') || icon.includes('sleet') || icon.includes('ice') || icon.includes('hail') || icon.includes('snowflake'))
+    return 'snow';
+  if (icon.includes('rain') || icon.includes('drizzle') || icon.includes('shower')) return 'rain';
+  if (icon.includes('cloud')) return 'cloud';
+
+  if (icon.includes('sun') || icon.includes('clear')) return 'clear';
+
+  return 'other';
+}
+
+export function conditionTintRgb(iconName: string | undefined | null, description?: string | null): Rgb {
+  switch (conditionTintKind(iconName, description)) {
+    case 'clear':
+      // Light sky blue
+      return rgb(130, 216, 255);
+    case 'cloud':
+      // Cool gray
+      return rgb(174, 184, 198);
+    case 'rain':
+      // Indigo wash
+      return rgb(102, 146, 222);
+    case 'storm':
+      // Electric violet-blue
+      return rgb(128, 120, 222);
+    case 'snow':
+      // Icy cyan
+      return rgb(170, 244, 255);
+    case 'fog':
+      // Misty desaturated
+      return rgb(196, 206, 216);
+    case 'sand':
+      // Tan / desert
+      return rgb(242, 206, 148);
+    default:
+      return rgb(124, 246, 255);
+  }
+}
+
+export const CONDITION_PALETTE: Record<ConditionTintKind, { label: string; rgb: Rgb; hex: string }> = {
+  clear: { label: 'Clear', rgb: rgb(130, 216, 255), hex: '#82D8FF' },
+  cloud: { label: 'Clouds', rgb: rgb(174, 184, 198), hex: '#AEB8C6' },
+  rain: { label: 'Rain', rgb: rgb(102, 146, 222), hex: '#6692DE' },
+  storm: { label: 'Storm', rgb: rgb(128, 120, 222), hex: '#8078DE' },
+  snow: { label: 'Snow', rgb: rgb(170, 244, 255), hex: '#AAF4FF' },
+  fog: { label: 'Fog', rgb: rgb(196, 206, 216), hex: '#C4CED8' },
+  sand: { label: 'Sand', rgb: rgb(242, 206, 148), hex: '#F2CE94' },
+  other: { label: 'Other', rgb: rgb(124, 246, 255), hex: '#7CF6FF' },
+};
+
+export function conditionCardStyle(iconName: string | undefined | null, description?: string | null): CSSProperties {
+  const kind = conditionTintKind(iconName, description);
+  const { r, g, b } = CONDITION_PALETTE[kind].rgb;
+
+  return {
+    background:
+      `linear-gradient(180deg, ` +
+      `color-mix(in srgb, var(--sky-surface) calc(100% - var(--sky-wash-a)), rgb(${r} ${g} ${b}) var(--sky-wash-a)), ` +
+      `color-mix(in srgb, var(--sky-surface-2) calc(100% - var(--sky-wash-b)), rgb(${r} ${g} ${b}) var(--sky-wash-b)))`,
+    borderColor: `color-mix(in srgb, var(--sky-border) calc(100% - var(--sky-wash-border)), rgb(${r} ${g} ${b}) var(--sky-wash-border))`,
+    boxShadow: 'none',
+  };
+}
+

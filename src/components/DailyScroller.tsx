@@ -26,6 +26,12 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const readTopStackHeight = (scrollContainer: HTMLElement): number => {
+    const raw = getComputedStyle(scrollContainer).getPropertyValue('--sky-top-stack-h').trim();
+    const n = Number.parseFloat(raw.replace('px', ''));
+    return Number.isFinite(n) ? n : 0;
+  };
+
   const fastScrollTo = (container: HTMLElement, top: number, durationMs = 450) => {
     const startTop = container.scrollTop;
     const delta = top - startTop;
@@ -53,7 +59,8 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
 
     const containerTop = scrollContainer.getBoundingClientRect().top;
     const elementTop = element.getBoundingClientRect().top;
-    const targetTop = elementTop - containerTop + scrollContainer.scrollTop;
+    const pinned = readTopStackHeight(scrollContainer);
+    const targetTop = elementTop - containerTop + scrollContainer.scrollTop - pinned;
     fastScrollTo(scrollContainer, targetTop, 450);
   };
 
@@ -100,7 +107,14 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
   }, [selectedDayIdx]);
 
   return (
-    <div id="daily-scroller-main" className="w-full bg-slate-50 dark:bg-slate-900/60 p-3 border-b border-slate-250 dark:border-slate-800/80 shrink-0">
+    <div
+      id="daily-scroller-main"
+      className="w-full p-3 border-b border-[color:var(--sky-border)] shrink-0"
+      style={{
+        background: 'linear-gradient(180deg, var(--sky-card-2), var(--sky-card))',
+        backdropFilter: 'blur(10px)',
+      }}
+    >
 
 
       {/* HORIZONTAL scrolling container with hide scrollbar utilities */}
@@ -123,21 +137,20 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
               onClick={() => handleDayClick(idx)}
               className={`flex-shrink-0 w-[84px] p-2.5 rounded-2xl border transition duration-200 flex flex-col items-center text-center relative cursor-pointer ${
                 isSelected
-                  ? 'bg-white dark:bg-slate-800 border-emerald-500 shadow-md ring-1 ring-emerald-500/10'
-                  : 'bg-white/80 dark:bg-slate-900/40 border-slate-200/60 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-900 hover:border-slate-350'
+                  ? 'bg-[color:var(--sky-card-2)] border-[color:rgba(124,246,255,0.40)] shadow-md'
+                  : 'bg-[color:var(--sky-card)] border-[color:var(--sky-border)] hover:bg-[color:var(--sky-card-2)] hover:border-[color:var(--sky-border-2)]'
               }`}
             >
-              {/* Animated highlight dot for select indicators */}
-              {isSelected && (
-                <span className="absolute top-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              )}
-
               {/* Day of Week & Full Date Code */}
-              <span className={`text-xs font-extrabold tracking-tight ${isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'}`}>
+              <span
+                className={`text-sm font-extrabold tracking-tight sky-title ${
+                  isSelected ? 'text-[color:var(--sky-accent)]' : 'text-[color:var(--sky-fg)]'
+                }`}
+              >
                 {dayOfWeekShort}
               </span>
               
-              <span className="text-[10px] text-slate-450 dark:text-slate-400 uppercase font-mono font-bold mt-0.5">
+              <span className="text-[11px] text-[color:var(--sky-dim)] uppercase sky-mono font-bold mt-0.5">
                 {monthShort} {dayOfMonth}
               </span>
 
@@ -145,16 +158,16 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
               <div className="my-1 flex items-center justify-center">
                 <WeatherIcon 
                   name={day.iconName} 
-                  className={isSelected ? 'text-emerald-500 animate-pulse' : 'text-slate-500 dark:text-slate-400'} 
+                  className={isSelected ? 'text-[color:var(--sky-accent-2)] animate-pulse' : 'text-[color:var(--sky-dim)]'} 
                   size={18} 
                 />
               </div>
 
               {/* High / Low Temp range values */}
-              <div className="flex items-center gap-1.5 text-xs font-mono font-bold border-t border-slate-100 dark:border-slate-800/80 pt-[6px] w-full justify-center">
-                <span className="text-slate-800 dark:text-slate-200">{convertTemp(day.tempMax, settings.tempUnit)}°</span>
-                <span className="text-slate-300 dark:text-slate-600 font-normal">|</span>
-                <span className="text-slate-400 font-normal">{convertTemp(day.tempMin, settings.tempUnit)}°</span>
+              <div className="flex items-center gap-1.5 text-sm sky-mono font-bold border-t border-[color:var(--sky-border)] pt-[6px] w-full justify-center">
+                <span className="text-[color:var(--sky-fg)]">{convertTemp(day.tempMax, settings.tempUnit)}°</span>
+                <span className="text-[color:var(--sky-border-2)] font-normal">|</span>
+                <span className="text-[color:var(--sky-dim)] font-normal">{convertTemp(day.tempMin, settings.tempUnit)}°</span>
               </div>
             </button>
           );

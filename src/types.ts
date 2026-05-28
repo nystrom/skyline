@@ -45,6 +45,10 @@ export interface WeatherData {
   country: string;
   lat: number;
   lon: number;
+  /** IANA timezone for the selected location, when available (e.g. "Europe/Zurich"). */
+  timeZone?: string;
+  /** Fixed offset in minutes from UTC for the selected location, when available. */
+  timeZoneOffsetMinutes?: number;
   current: {
     temp: number;
     description: string;
@@ -93,10 +97,13 @@ export interface UserSettings {
   city: string;
   activeLocation?: SavedLocation;
   provider: WeatherProvider;
+  theme: 'system' | 'dark' | 'light';
   tempUnit: 'C' | 'F';
   windSpeedUnit: 'm/s' | 'kph' | 'mph' | 'knots';
   clockFormat: '12h' | '24h';
   showSunriseSunset: boolean;
   showMoonriseMoonset: boolean;
+  /** Auto-refresh interval for forecasts (also used as in-memory cache TTL). */
+  refreshIntervalMinutes: number;
   units: 'metric' | 'imperial'; // Kept for general fallback/compatibility
 }

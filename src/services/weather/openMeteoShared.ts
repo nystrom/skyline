@@ -33,7 +33,9 @@ function parseOpenMeteoRawBundle(
     hourly: Record<string, Array<number | null>>;
     daily: Record<string, number[]>;
   },
-  extensionDays: ExtensionDay[]
+  extensionDays: ExtensionDay[],
+  timeZone?: string,
+  timeZoneOffsetMinutes?: number
 ): ProviderRawBundle {
   const current = primaryData.current;
   const hourly = primaryData.hourly;
@@ -110,6 +112,8 @@ function parseOpenMeteoRawBundle(
     rawHourly,
     dailyPoints: mergedDailyPoints,
     currentTemp: coalesceNumber(current.temperature_2m),
+    timeZone,
+    timeZoneOffsetMinutes,
     current: {
       temp: Math.round(coalesceNumber(current.temperature_2m)),
       description: wmoToDesc(coalesceNumber(current.weather_code, 0)),
@@ -193,13 +197,17 @@ export async function fetchOpenMeteoRawBundle(
   }
 
   const extensionDays = await fetchExtensionDays(lat, lon, options.rateLimitKey);
+  const tz = (primaryData as { timezone?: string })?.timezone;
+  const offsetSec = (primaryData as { utc_offset_seconds?: number })?.utc_offset_seconds;
   return parseOpenMeteoRawBundle(
     primaryData as {
       current: Record<string, number>;
       hourly: Record<string, Array<number | null>>;
       daily: Record<string, number[]>;
     },
-    extensionDays
+    extensionDays,
+    tz,
+    typeof offsetSec === 'number' ? offsetSec / 60 : undefined
   );
 }
 

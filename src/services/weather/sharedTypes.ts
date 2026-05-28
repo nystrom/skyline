@@ -64,6 +64,8 @@ export interface ProviderRawBundle {
   dailyPoints: StandardDailyPoint[];
   currentTemp: number;
   current: WeatherData['current'];
+  timeZone?: string;
+  timeZoneOffsetMinutes?: number;
 }
 
 export interface ForecastBuildInput {
@@ -72,6 +74,8 @@ export interface ForecastBuildInput {
   current: WeatherData['current'];
   rawHourly: RawHourlySlot[];
   dailyPoints: StandardDailyPoint[];
+  timeZone?: string;
+  timeZoneOffsetMinutes?: number;
   targetDays?: number;
 }
 

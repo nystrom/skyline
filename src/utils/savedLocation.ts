@@ -10,17 +10,47 @@ export function locationId(lat: number, lon: number): string {
   return `${lat.toFixed(4)},${lon.toFixed(4)}`;
 }
 
-export function formatLocationLabel(loc: Pick<GeocodedLocation, 'name' | 'country' | 'state'>): string {
-  if (loc.country) {
-    return `${loc.name}, ${loc.country}`;
+type LocationLabelParts = {
+  name?: string;
+  label?: string;
+  state?: string;
+  country?: string;
+};
+
+function normalizePart(part: string | undefined): string | undefined {
+  const trimmed = part?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function labelAlreadyLooksFormatted(label: string, { state, country }: { state?: string; country?: string }): boolean {
+  if (!label.includes(',')) return false;
+  const l = label.toLowerCase();
+  const hasState = state ? l.includes(state.toLowerCase()) : false;
+  const hasCountry = country ? l.includes(country.toLowerCase()) : false;
+  return hasState || hasCountry;
+}
+
+export function formatLocationLabel(parts: LocationLabelParts): string {
+  const name = normalizePart(parts.name);
+  const label = normalizePart(parts.label);
+  const state = normalizePart(parts.state);
+  const country = normalizePart(parts.country);
+
+  const base = label ?? name ?? '';
+  if (!base) return '';
+
+  if (label && labelAlreadyLooksFormatted(label, { state, country })) {
+    return label;
   }
-  return loc.name;
+
+  const suffix = [state, country].filter(Boolean).join(', ');
+  return suffix ? `${base}, ${suffix}` : base;
 }
 
 export function geocodedToSaved(loc: GeocodedLocation): SavedLocation {
   return {
     id: locationId(loc.lat, loc.lon),
-    label: formatLocationLabel(loc),
+    label: formatLocationLabel({ name: loc.name, state: loc.state, country: loc.country }),
     lat: loc.lat,
     lon: loc.lon,
     country: loc.country,

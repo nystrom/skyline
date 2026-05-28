@@ -155,6 +155,7 @@ async function fetchOpenWeatherRawBundle(
     rawHourly,
     dailyPoints,
     currentTemp: curMain.temp,
+    timeZoneOffsetMinutes: Math.round(timezoneOffsetSec / 60),
     current: {
       temp: Math.round(curMain.temp),
       description: curWeather[0]?.description || 'Clear',

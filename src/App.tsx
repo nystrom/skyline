@@ -15,6 +15,22 @@ import { WeatherTimeline } from './components/WeatherTimeline';
 import { WeatherIcon } from './components/WeatherIcon';
 
 const ACTIVE_LOCATION_KEY = 'sky_timeline_active_location';
+const THEME_KEY = 'sky_timeline_theme';
+const REFRESH_MINUTES_KEY = 'sky_timeline_refresh_minutes';
+
+type EffectiveTheme = 'dark' | 'light';
+
+function resolveEffectiveTheme(theme: UserSettings['theme']): EffectiveTheme {
+  if (theme === 'dark' || theme === 'light') return theme;
+  return window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ? 'dark' : 'light';
+}
+
+function applyThemeToDocument(effective: EffectiveTheme) {
+  const root = document.documentElement;
+  root.dataset.theme = effective;
+  if (effective === 'dark') root.classList.add('dark');
+  else root.classList.remove('dark');
+}
 
 function loadActiveLocation(): SavedLocation | undefined {
   try {
@@ -53,6 +69,13 @@ export default function App() {
     const savedClockFormat = (localStorage.getItem('sky_timeline_clock_format') as '12h' | '24h') || '24h';
     const savedShowSunriseSunset = localStorage.getItem('sky_timeline_show_sunrise_sunset') !== 'false';
     const savedShowMoonriseMoonset = localStorage.getItem('sky_timeline_show_moonrise_moonset') !== 'false';
+    const savedRefreshMinutesRaw = localStorage.getItem(REFRESH_MINUTES_KEY) || '10';
+    const savedRefreshMinutes = (() => {
+      const n = Number.parseInt(savedRefreshMinutesRaw, 10);
+      if (!Number.isFinite(n)) return 10;
+      return Math.min(120, Math.max(1, n));
+    })();
+    const savedTheme = (localStorage.getItem(THEME_KEY) as UserSettings['theme']) || 'system';
     const activeLocation = loadActiveLocation() ?? defaultLocation(savedCity);
 
     return {
@@ -61,11 +84,13 @@ export default function App() {
       activeLocation,
       units: savedUnits,
       provider: savedProvider,
+      theme: savedTheme,
       tempUnit: savedTempUnit,
       windSpeedUnit: savedWindSpeedUnit,
       clockFormat: savedClockFormat,
       showSunriseSunset: savedShowSunriseSunset,
       showMoonriseMoonset: savedShowMoonriseMoonset,
+      refreshIntervalMinutes: savedRefreshMinutes,
     };
   });
 
@@ -79,6 +104,7 @@ export default function App() {
   const [activeDayIdx, setActiveDayIdx] = useState(0);
   const loadAbortRef = useRef<AbortController | null>(null);
   const scrollSpyBlockedRef = useRef(false);
+  const topStackRef = useRef<HTMLDivElement>(null);
 
   const blockScrollSpy = (ms = 700) => {
     scrollSpyBlockedRef.current = true;
@@ -131,12 +157,44 @@ export default function App() {
       if (newSettings.showMoonriseMoonset !== undefined) {
         localStorage.setItem('sky_timeline_show_moonrise_moonset', String(updated.showMoonriseMoonset));
       }
+      if (newSettings.refreshIntervalMinutes !== undefined) {
+        localStorage.setItem(REFRESH_MINUTES_KEY, String(updated.refreshIntervalMinutes));
+      }
+      if (newSettings.theme !== undefined) {
+        localStorage.setItem(THEME_KEY, updated.theme);
+      }
       return updated;
     });
   };
 
+  useEffect(() => {
+    const apply = () => applyThemeToDocument(resolveEffectiveTheme(settings.theme));
+    apply();
+
+    if (settings.theme !== 'system') return;
+    if (typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const onChange = () => apply();
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', onChange);
+      return () => mql.removeEventListener('change', onChange);
+    }
+
+    // Safari fallback
+    const legacy = mql as unknown as { addListener: (cb: () => void) => void; removeListener: (cb: () => void) => void };
+    legacy.addListener(onChange);
+    return () => legacy.removeListener(onChange);
+  }, [settings.theme]);
+
   const handleRefresh = () => {
     loadWeatherData();
+  };
+
+  const readTopStackHeight = (scrollContainer: HTMLElement): number => {
+    const raw = getComputedStyle(scrollContainer).getPropertyValue('--sky-top-stack-h').trim();
+    const n = Number.parseFloat(raw.replace('px', ''));
+    return Number.isFinite(n) ? n : 0;
   };
 
   const handleSelectNow = () => {
@@ -148,11 +206,10 @@ export default function App() {
       if (!scrollContainer || !element) return;
 
       const containerTop = scrollContainer.getBoundingClientRect().top;
-      const containerHeight = scrollContainer.clientHeight;
       const elementTop = element.getBoundingClientRect().top;
-      const elementHeight = element.clientHeight;
-      const targetTop =
-        elementTop - containerTop + scrollContainer.scrollTop - containerHeight / 2 + elementHeight / 2;
+      const pinned = readTopStackHeight(scrollContainer);
+      const pad = 8;
+      const targetTop = elementTop - containerTop + scrollContainer.scrollTop - pinned - pad;
 
       scrollContainer.scrollTo({ top: Math.max(0, targetTop), behavior: 'auto' });
     }, 100);
@@ -227,6 +284,15 @@ export default function App() {
     settings.activeLocation?.id,
   ]);
 
+  useEffect(() => {
+    const minutes = Math.min(120, Math.max(1, settings.refreshIntervalMinutes || 10));
+    const id = window.setInterval(() => {
+      loadWeatherData();
+    }, minutes * 60_000);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.refreshIntervalMinutes, settings.city, settings.provider, settings.activeLocation?.id, settings.apiKey]);
+
   const displayData = weatherData ?? lastLiveData;
 
   useEffect(() => {
@@ -235,71 +301,95 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayData?.daily?.length, displayData?.city]);
 
+  useEffect(() => {
+    const container = document.getElementById('weather-timeline-container');
+    const topStack = topStackRef.current;
+    if (!container || !topStack) return;
+
+    const apply = () => {
+      const h = Math.round(topStack.getBoundingClientRect().height);
+      container.style.setProperty('--sky-top-stack-h', `${h}px`);
+    };
+
+    apply();
+    const ro = new ResizeObserver(() => apply());
+    ro.observe(topStack);
+    return () => ro.disconnect();
+  }, [displayData != null]);
+
   return (
     <div
       id="app-root-container"
-      className="min-h-screen bg-slate-950 flex justify-center items-start md:items-center py-0 md:py-6 font-sans antialiased text-slate-800 dark:text-slate-100 selection:bg-emerald-500/30"
+      className="sky-app min-h-screen flex justify-center items-start md:items-center py-0 md:py-6 antialiased selection:bg-[color:rgba(124,246,255,0.22)]"
     >
-      <div className="absolute left-10 top-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none hidden lg:block" />
-      <div className="absolute right-10 bottom-1/4 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none hidden lg:block" />
+      <div className="sky-atmos" />
+      <div className="sky-noise" />
 
       <div
         id="phone-skin-container"
-        className="w-full max-w-md bg-white dark:bg-slate-900 md:rounded-[40px] md:shadow-[0_20px_50px_rgba(0,0,0,0.6)] md:border-8 md:border-slate-800 flex flex-col min-h-screen md:min-h-[812px] md:max-h-[850px] overflow-hidden"
+        className="sky-phone w-full max-w-md md:rounded-[40px] md:border-8 md:border-black/40 flex flex-col min-h-screen md:min-h-[812px] md:max-h-[850px] overflow-hidden"
       >
-        <div className="hidden md:flex items-center justify-between px-6 pt-3 pb-1.5 bg-slate-900 text-slate-400 font-mono text-[9px] select-none rounded-t-[30px] border-b border-slate-850">
+        <div className="hidden md:flex items-center justify-between px-6 pt-3 pb-1.5 text-[9px] select-none rounded-t-[30px] border-b border-white/10 bg-black/25 sky-mono text-[color:var(--sky-dim)]">
           <div className="flex items-center gap-1">
             <span>NETWORK SOL_NET</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--sky-accent-2)] animate-pulse" />
           </div>
-          <div className="w-24 h-4 bg-slate-950 rounded-full border border-slate-800" />
+          <div className="w-24 h-4 bg-black/30 rounded-full border border-white/10" />
           <div className="flex items-center gap-1">
             <span>100% ELEVATED</span>
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-100 dark:bg-slate-950">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-transparent">
           {displayData ? (
             <>
-              <div className="shrink-0 z-20">
-                <WeatherHeader
-                  weatherData={displayData}
-                  settings={settings}
-                  updateSettings={updateSettings}
-                  isLoading={isLoading}
-                  onRefresh={handleRefresh}
-                  errorMsg={errorMsg}
-                  fetchWarnings={fetchWarnings}
-                  onDismissError={() => setErrorMsg(null)}
-                  onDismissWarnings={() => setFetchWarnings([])}
-                  dataSource={dataSource}
-                  onSelectNow={handleSelectNow}
-                />
+              <div
+                id="weather-timeline-container"
+                className="flex-1 min-h-0 overflow-y-auto scrollbar-none rounded-t-3xl shadow-inner relative z-10 border-t border-[color:var(--sky-border)]"
+                style={{ background: 'linear-gradient(180deg, var(--sky-card), transparent)' }}
+              >
+                <div id="weather-top-stack" ref={topStackRef} className="sticky top-0 z-30">
+                  <WeatherHeader
+                    weatherData={displayData}
+                    settings={settings}
+                    updateSettings={updateSettings}
+                    isLoading={isLoading}
+                    onRefresh={handleRefresh}
+                    errorMsg={errorMsg}
+                    fetchWarnings={fetchWarnings}
+                    onDismissError={() => setErrorMsg(null)}
+                    onDismissWarnings={() => setFetchWarnings([])}
+                    dataSource={dataSource}
+                    onSelectNow={handleSelectNow}
+                  />
 
-                <DailyScroller
+                  <DailyScroller
+                    daily={displayData.daily}
+                    selectedDayIdx={activeDayIdx}
+                    onSelectDay={setActiveDayIdx}
+                    onBeforeTimelineScroll={blockScrollSpy}
+                    settings={settings}
+                  />
+                </div>
+
+                <WeatherTimeline
                   daily={displayData.daily}
-                  selectedDayIdx={activeDayIdx}
-                  onSelectDay={setActiveDayIdx}
-                  onBeforeTimelineScroll={blockScrollSpy}
                   settings={settings}
+                  activeDayIdx={activeDayIdx}
+                  onActiveDayChange={setActiveDayIdx}
+                  scrollSpyBlockedRef={scrollSpyBlockedRef}
+                  timeZone={displayData.timeZone}
+                  timeZoneOffsetMinutes={displayData.timeZoneOffsetMinutes}
                 />
               </div>
-
-              <WeatherTimeline
-                daily={displayData.daily}
-                settings={settings}
-                activeDayIdx={activeDayIdx}
-                onActiveDayChange={setActiveDayIdx}
-                scrollSpyBlockedRef={scrollSpyBlockedRef}
-              />
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[400px]">
               <div className="flex items-center gap-2">
-                <span className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400">
-                  <WeatherIcon name="sun" size={22} className="animate-spin-slow text-emerald-400" />
+                <span className="p-2 rounded-2xl text-[color:var(--sky-accent)] border border-white/10 bg-white/5 sky-accent-glow">
+                  <WeatherIcon name="sun" size={22} className="animate-spin-slow text-[color:var(--sky-accent)]" />
                 </span>
-                <span className="text-lg font-bold tracking-tight font-sans text-slate-700 dark:text-slate-200">
+                <span className="sky-title text-lg font-bold tracking-tight text-[color:var(--sky-fg)]">
                   Skyline
                 </span>
               </div>
@@ -307,8 +397,8 @@ export default function App() {
           )}
         </div>
 
-        <div className="hidden md:block py-2 bg-slate-900 border-t border-slate-850 rounded-b-[30px] shrink-0 text-center">
-          <div className="w-28 h-1 bg-slate-700 rounded-full mx-auto" />
+        <div className="hidden md:block py-2 bg-black/25 border-t border-white/10 rounded-b-[30px] shrink-0 text-center">
+          <div className="w-28 h-1 bg-white/15 rounded-full mx-auto" />
         </div>
       </div>
     </div>

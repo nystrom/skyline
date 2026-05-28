@@ -42,6 +42,7 @@ async function fetchNWSRawBundle(location: WeatherLocationInput, signal?: AbortS
     throw new Error(`NWS: Failed to fetch points metadata (${pointsRes.status})`);
   }
   const pointsData = await pointsRes.json();
+  const timeZone = (pointsData?.properties?.timeZone as string | undefined) ?? undefined;
   const forecastHourlyUrl = `${pointsData.properties.forecastHourly}?units=si`;
   const forecastDailyUrl = `${pointsData.properties.forecast}?units=si`;
   const astroUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=sunrise,sunset,moonrise,moonset,moon_phase&hourly=cloud_cover&current=cloud_cover&timezone=auto&timeformat=unixtime`;
@@ -140,6 +141,7 @@ async function fetchNWSRawBundle(location: WeatherLocationInput, signal?: AbortS
   return {
     rawHourly,
     dailyPoints,
+    timeZone,
     currentTemp: currentPeriod.temperature as number,
     current: {
       temp: Math.round(currentPeriod.temperature as number),

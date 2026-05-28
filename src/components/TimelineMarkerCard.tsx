@@ -8,13 +8,18 @@ import { WeatherTimelineEvent, UserSettings } from '../types';
 import { WeatherIcon } from './WeatherIcon';
 import { Flame, Sunrise, Sunset } from 'lucide-react';
 import { convertTemp, convertWindSpeed } from '../utils/unitConverter';
+import { formatTimeAtLocation } from '../utils/unitConverter';
 import { WindDirectionArrow } from './WindDirectionArrow';
+import { conditionCardStyle } from '../utils/conditionPalette';
+
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const Odometer: React.FC<{ value: number; instant?: boolean }> = ({ value, instant }) => {
   const [displayValue, setDisplayValue] = useState(value);
 
   useEffect(() => {
-    if (instant) {
+    if (instant || prefersReducedMotion()) {
       setDisplayValue(value);
       return;
     }
@@ -27,7 +32,7 @@ const Odometer: React.FC<{ value: number; instant?: boolean }> = ({ value, insta
   }, [value, displayValue, instant]);
 
   return (
-    <span className="inline-block tabular-nums font-mono font-black text-emerald-400 min-w-[12px] text-center">
+    <span className="inline-block tabular-nums font-mono font-black text-emerald-400 min-w-[12px] text-center text-[11px]">
       {displayValue}
     </span>
   );
@@ -47,22 +52,14 @@ const WindShiftLoop: React.FC<WindShiftLoopProps> = ({ event, settings, iconColo
   const [phase, setPhase] = useState<0 | 1 | 2>(0);
 
   useEffect(() => {
+    if (prefersReducedMotion()) return;
     let timer: NodeJS.Timeout;
     if (phase === 0) {
-      // Stay on Old state for 1.5 seconds, then begin transition
-      timer = setTimeout(() => {
-        setPhase(1);
-      }, 1500);
+      timer = setTimeout(() => setPhase(1), 1500);
     } else if (phase === 1) {
-      // Transition animation takes 1.2 seconds, then remain in paused state
-      timer = setTimeout(() => {
-        setPhase(2);
-      }, 1200);
+      timer = setTimeout(() => setPhase(2), 1200);
     } else if (phase === 2) {
-      // Pause on New direction for 4.0 seconds, then INSTANTLY jump back to Old
-      timer = setTimeout(() => {
-        setPhase(0);
-      }, 4000);
+      timer = setTimeout(() => setPhase(0), 4000);
     }
     return () => clearTimeout(timer);
   }, [phase]);
@@ -82,7 +79,7 @@ const WindShiftLoop: React.FC<WindShiftLoopProps> = ({ event, settings, iconColo
   const isTransitioning = phase === 1;
 
   return (
-    <div className="flex items-center gap-2 flex-wrap text-[10px] select-none font-bold">
+    <div className="flex items-center gap-2 flex-wrap text-[12px] select-none font-bold">
       <WindDirectionArrow
         deg={currentDeg}
         size={12}
@@ -90,12 +87,12 @@ const WindShiftLoop: React.FC<WindShiftLoopProps> = ({ event, settings, iconColo
         transition={isTransitioning}
         durationMs={1200}
       />
-      <span className="uppercase tracking-wide text-slate-300">Wind Shift:</span>
+      <span className="uppercase tracking-wide text-[color:var(--sky-muted)]">Wind Shift:</span>
 
       {/* Dial Speed Odometer indicator - no black background, no border */}
-      <span className="font-mono text-[10px] text-slate-300 font-bold px-1 py-0.5 rounded flex items-center gap-0.5 select-none shrink-0 bg-transparent">
+      <span className="font-mono text-[12px] text-[color:var(--sky-muted)] font-bold px-1 py-0.5 rounded flex items-center gap-0.5 select-none shrink-0 bg-transparent">
         <Odometer value={currentSpeed} instant={phase === 0} />
-        <span className="text-[9px] font-normal text-slate-500 ml-0.5">
+            <span className="text-[10px] font-normal text-[color:var(--sky-dim)] ml-0.5">
           {settings.windSpeedUnit}
         </span>
       </span>
@@ -107,10 +104,30 @@ const WindShiftLoop: React.FC<WindShiftLoopProps> = ({ event, settings, iconColo
 interface TimelineMarkerCardProps {
   event: WeatherTimelineEvent;
   settings: UserSettings;
+  timeZone?: string;
+  timeZoneOffsetMinutes?: number;
 }
 
-export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({ event, settings }) => {
+export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({
+  event,
+  settings,
+  timeZone,
+  timeZoneOffsetMinutes,
+}) => {
   const isSpecial = event.isSpecial;
+  const tz = { timeZone, offsetMinutes: timeZoneOffsetMinutes };
+  const [nowTick, setNowTick] = useState(() => new Date());
+
+  useEffect(() => {
+    if (event.type !== 'now') return;
+    const id = window.setInterval(() => setNowTick(new Date()), 1000);
+    return () => window.clearInterval(id);
+  }, [event.type]);
+
+  const timeLabel =
+    event.type === 'now'
+      ? formatTimeAtLocation(nowTick, settings.clockFormat, tz)
+      : event.hourLabel;
 
   // Custom styling colors based on theme configs
   const getThemeStyles = () => {
@@ -125,7 +142,7 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({ event, s
         };
       case 'sunrise':
         return {
-          bg: 'bg-amber-50/90 dark:bg-amber-955/25',
+          bg: 'bg-amber-50/90 dark:bg-amber-950/25',
           border: 'border-amber-400/50 shadow-amber-500/10',
           text: 'text-amber-700 dark:text-amber-300',
           badgeBg: 'bg-amber-500 text-white',
@@ -133,16 +150,16 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({ event, s
         };
       case 'sunset':
         return {
-          bg: 'bg-indigo-50/95 dark:bg-indigo-955/25',
-          border: 'border-indigo-400/50 shadow-indigo-505/10',
+          bg: 'bg-indigo-50/95 dark:bg-indigo-950/25',
+          border: 'border-indigo-400/50 shadow-indigo-500/10',
           text: 'text-indigo-700 dark:text-indigo-300',
           badgeBg: 'bg-indigo-600 text-white',
           pulseColor: 'bg-indigo-400'
         };
       case 'moonrise':
         return {
-          bg: 'bg-purple-50/90 dark:bg-purple-955/25',
-          border: 'border-purple-400/50 shadow-purple-505/10',
+          bg: 'bg-purple-50/90 dark:bg-purple-950/25',
+          border: 'border-purple-400/50 shadow-purple-500/10',
           text: 'text-purple-700 dark:text-purple-300',
           badgeBg: 'bg-purple-500 text-white',
           pulseColor: 'bg-purple-400'
@@ -150,14 +167,14 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({ event, s
       case 'moonset':
         return {
           bg: 'bg-slate-50/90 dark:bg-slate-900/25',
-          border: 'border-slate-400/50 shadow-slate-505/10',
-          text: 'text-slate-705 dark:text-slate-300',
+          border: 'border-slate-400/50 shadow-slate-500/10',
+          text: 'text-slate-700 dark:text-slate-300',
           badgeBg: 'bg-slate-500 text-white',
           pulseColor: 'bg-slate-400'
         };
       case 'peak_temp':
         return {
-          bg: 'bg-rose-50/90 dark:bg-rose-955/25',
+          bg: 'bg-rose-50/90 dark:bg-rose-950/25',
           border: 'border-rose-400/50 shadow-rose-500/10',
           text: 'text-rose-700 dark:text-rose-300',
           badgeBg: 'bg-rose-500 text-white',
@@ -165,7 +182,7 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({ event, s
         };
       case 'wind_shift':
         return {
-          bg: 'bg-emerald-50/90 dark:bg-emerald-955/25',
+          bg: 'bg-emerald-50/90 dark:bg-emerald-950/25',
           border: 'border-emerald-400/50 shadow-emerald-500/10',
           text: 'text-emerald-700 dark:text-emerald-300',
           badgeBg: 'bg-emerald-500 text-white',
@@ -184,13 +201,14 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({ event, s
 
   // If it's a standard hourly status element (NOT a triggered instantaneous marker)
   if (!isSpecial) {
+    const condStyle = conditionCardStyle(event.iconName, event.description);
     return (
       <div 
         id={`timeline-hourly-event-${event.id}`}
-        className="flex items-stretch gap-2 py-1.5 pl-2 pr-2"
+        className="flex items-stretch gap-4 py-1.5 pl-2 pr-2"
       >
         {/* Time Left index header */}
-        <div className="w-10 text-right font-mono text-[11px] font-bold text-slate-405 dark:text-slate-400 shrink-0 flex items-center justify-end">
+        <div className="w-10 text-right font-mono text-[12px] font-bold text-[color:var(--sky-dim)] shrink-0 flex items-center justify-end">
           {event.hourLabel.replace(':00', '')}
         </div>
 
@@ -198,18 +216,21 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({ event, s
         <div className="w-3 shrink-0" />
 
         {/* Content detail layout */}
-        <div className="flex-1 min-w-0 bg-white dark:bg-slate-900 border border-slate-150/80 dark:border-slate-800/80 px-3.5 h-[72px] rounded-2xl flex items-center justify-between shadow-sm hover:border-slate-350 transition-all duration-150">
+        <div
+          className="flex-1 min-w-0 border px-3.5 h-[72px] rounded-2xl flex items-center justify-between shadow-sm transition-all duration-150"
+          style={condStyle}
+        >
           {/* Left part: Icon at top, Condition text below, wrapping correctly */}
           <div className="flex-1 flex flex-col items-start justify-center min-w-0 h-full py-1">
-            <div className="p-1 bg-slate-50 dark:bg-slate-800 rounded text-slate-500 shrink-0">
+            <div className="p-1 rounded text-[color:var(--sky-muted)] shrink-0">
               <WeatherIcon name={event.iconName} size={15} />
             </div>
             <div className="flex flex-col items-start w-full">
-              <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100 capitalize whitespace-normal break-words leading-none w-full">
+              <span className="text-[12px] font-bold text-[color:var(--sky-fg)] capitalize whitespace-normal break-words leading-none w-full">
                 {event.description}
               </span>
               {event.precipProb !== undefined && event.precipProb > 10 && (
-                <span className="text-[9px] bg-blue-50/80 dark:bg-blue-900/40 dark:text-blue-200 text-blue-600 font-bold px-1.5 py-0.5 rounded font-mono shrink-0 mt-0.5">
+                <span className="text-[10px] text-[color:var(--sky-dim)] font-bold font-mono shrink-0 mt-0.5">
                   {event.precipProb}% Rain
                 </span>
               )}
@@ -217,10 +238,10 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({ event, s
           </div>
 
           {/* Left divider line simulating '|' */}
-          <div className="h-5 w-[1px] bg-slate-100 dark:bg-slate-800/80 mx-2 shrink-0" />
+          <div className="h-5 w-[1px] bg-[color:var(--sky-border)] mx-2 shrink-0" />
 
           {/* Middle part: Wind */}
-          <div className="w-20 shrink-0 flex items-center justify-end gap-1.5 font-mono text-[10px] text-slate-500 h-full">
+          <div className="w-20 shrink-0 flex items-center justify-end gap-1.5 font-mono text-[11px] text-[color:var(--sky-dim)] h-full">
             {event.windSpeed !== undefined && (
               <>
                 <WindDirectionArrow
@@ -228,7 +249,7 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({ event, s
                   size={10}
                   title={`Wind direction: ${event.windDeg}°`}
                 />
-                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                <span className="font-semibold text-[color:var(--sky-muted)]">
                   {convertWindSpeed(event.windSpeed, settings.windSpeedUnit)} {settings.windSpeedUnit}
                 </span>
               </>
@@ -236,11 +257,11 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({ event, s
           </div>
 
           {/* Right divider line simulating '|' */}
-          <div className="h-5 w-[1px] bg-slate-100 dark:bg-slate-800/80 mx-2 shrink-0" />
+          <div className="h-5 w-[1px] bg-[color:var(--sky-border)] mx-2 shrink-0" />
 
           {/* Right part: Temperature */}
           <div className="w-12 shrink-0 text-right h-full flex items-center justify-end">
-            <span className="text-sm font-extrabold text-slate-800 dark:text-slate-200">
+            <span className="text-base font-extrabold text-[color:var(--sky-fg)]">
               {convertTemp(event.temp ?? 0, settings.tempUnit)}°
             </span>
           </div>
@@ -255,7 +276,7 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({ event, s
       case 'now':
         return {
           dotBg: 'bg-blue-500 ring-4 ring-blue-100 dark:ring-blue-950/50 animate-pulse',
-          lineColor: 'border-blue-150 dark:border-blue-800/40',
+          lineColor: 'border-blue-200 dark:border-blue-800/40',
           badgeBg: 'bg-blue-50/95 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800/80',
           text: 'text-blue-700 dark:text-blue-300',
           iconColor: 'text-blue-600 dark:text-blue-400',
@@ -263,63 +284,63 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({ event, s
         };
       case 'sunrise':
         return {
-          dotBg: 'bg-amber-400 ring-4 ring-amber-105 dark:ring-amber-955/40',
-          lineColor: 'border-amber-150 dark:border-amber-800/40',
-          badgeBg: 'bg-amber-50/95 dark:bg-amber-955/40 border-amber-200 dark:border-amber-800/80',
+          dotBg: 'bg-amber-400 ring-4 ring-amber-100 dark:ring-amber-950/40',
+          lineColor: 'border-amber-200 dark:border-amber-800/40',
+          badgeBg: 'bg-amber-50/95 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/80',
           text: 'text-amber-800 dark:text-amber-300',
           iconColor: 'text-amber-600 dark:text-amber-400',
           label: 'Sunrise'
         };
       case 'sunset':
         return {
-          dotBg: 'bg-indigo-600 ring-4 ring-indigo-100 dark:ring-indigo-955/40',
-          lineColor: 'border-indigo-150 dark:border-indigo-800/40',
-          badgeBg: 'bg-indigo-50/95 dark:bg-indigo-955/40 border-indigo-200 dark:border-indigo-800/80',
+          dotBg: 'bg-indigo-600 ring-4 ring-indigo-100 dark:ring-indigo-950/40',
+          lineColor: 'border-indigo-200 dark:border-indigo-800/40',
+          badgeBg: 'bg-indigo-50/95 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800/80',
           text: 'text-indigo-800 dark:text-indigo-300',
           iconColor: 'text-indigo-600 dark:text-indigo-400',
           label: 'Sunset'
         };
       case 'moonrise':
         return {
-          dotBg: 'bg-purple-500 ring-4 ring-purple-105 dark:ring-purple-955/40',
-          lineColor: 'border-purple-150 dark:border-purple-800/40',
-          badgeBg: 'bg-purple-50/95 dark:bg-purple-955/40 border-purple-200 dark:border-purple-800/80',
-          text: 'text-purple-850 dark:text-purple-300',
+          dotBg: 'bg-purple-500 ring-4 ring-purple-100 dark:ring-purple-950/40',
+          lineColor: 'border-purple-200 dark:border-purple-800/40',
+          badgeBg: 'bg-purple-50/95 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800/80',
+          text: 'text-purple-800 dark:text-purple-300',
           iconColor: 'text-purple-600 dark:text-purple-400',
           label: 'Moonrise'
         };
       case 'moonset':
         return {
-          dotBg: 'bg-slate-500 ring-4 ring-slate-105 dark:ring-slate-955/40',
-          lineColor: 'border-slate-150 dark:border-slate-800/40',
-          badgeBg: 'bg-slate-50/95 dark:bg-slate-955/40 border-slate-200 dark:border-slate-800/80',
+          dotBg: 'bg-slate-500 ring-4 ring-slate-100 dark:ring-slate-950/40',
+          lineColor: 'border-slate-200 dark:border-slate-800/40',
+          badgeBg: 'bg-slate-50/95 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800/80',
           text: 'text-slate-800 dark:text-slate-300',
           iconColor: 'text-slate-600 dark:text-slate-400',
           label: 'Moonset'
         };
       case 'peak_temp':
         return {
-          dotBg: 'bg-rose-500 ring-4 ring-rose-100 dark:ring-rose-955/40',
-          lineColor: 'border-rose-150 dark:border-rose-800/40',
-          badgeBg: 'bg-rose-50/95 dark:bg-rose-955/40 border-rose-200 dark:border-rose-800/80',
+          dotBg: 'bg-rose-500 ring-4 ring-rose-100 dark:ring-rose-950/40',
+          lineColor: 'border-rose-200 dark:border-rose-800/40',
+          badgeBg: 'bg-rose-50/95 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/80',
           text: 'text-rose-800 dark:text-rose-300',
-          iconColor: 'text-rose-600 dark:text-rose-450',
+          iconColor: 'text-rose-600 dark:text-rose-400',
           label: 'High Temperature'
         };
       case 'wind_shift':
         return {
-          dotBg: 'bg-emerald-500 ring-4 ring-emerald-100 dark:ring-emerald-955/40',
-          lineColor: 'border-emerald-150 dark:border-emerald-800/40',
-          badgeBg: 'bg-emerald-50/95 dark:bg-emerald-955/40 border-emerald-200 dark:border-emerald-800/80',
+          dotBg: 'bg-emerald-500 ring-4 ring-emerald-100 dark:ring-emerald-950/40',
+          lineColor: 'border-emerald-200 dark:border-emerald-800/40',
+          badgeBg: 'bg-emerald-50/95 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/80',
           text: 'text-emerald-800 dark:text-emerald-300',
           iconColor: 'text-emerald-600 dark:text-emerald-400',
           label: 'Wind Shift'
         };
       default:
         return {
-          dotBg: 'bg-slate-400 ring-4 ring-slate-100 dark:ring-slate-905/40',
-          lineColor: 'border-slate-150 dark:border-slate-800/40',
-          badgeBg: 'bg-slate-50/95 dark:bg-slate-950/40 border-slate-205 dark:border-slate-800/80',
+          dotBg: 'bg-slate-400 ring-4 ring-slate-100 dark:ring-slate-900/40',
+          lineColor: 'border-slate-200 dark:border-slate-800/40',
+          badgeBg: 'bg-slate-50/95 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800/80',
           text: 'text-slate-700 dark:text-slate-300',
           iconColor: 'text-slate-500 dark:text-slate-400',
           label: 'Weather Alert'
@@ -332,11 +353,11 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({ event, s
   return (
     <div 
       id={event.type === 'now' ? 'timeline-event-now' : `timeline-special-event-${event.id}`}
-      className="flex items-center gap-2 py-2 pl-2 pr-2 relative"
+      className="flex items-center gap-4 py-2 pl-2 pr-2 relative"
     >
       {/* Time label on the left */}
-      <div className="w-10 text-right font-mono text-[11px] font-bold text-slate-400 shrink-0 flex items-center justify-end">
-        {event.hourLabel}
+      <div className="w-10 text-right font-mono text-[12px] font-bold text-slate-400 shrink-0 flex items-center justify-end">
+        {timeLabel}
       </div>
 
       {/* Spine connection: a beautiful thematic dot positioned exactly on the spine */}
@@ -346,11 +367,11 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({ event, s
 
       {/* Horizontal line across the main card area */}
       <div className="flex-1 min-w-0 flex items-center relative h-6">
-        {/* Left segment of horizontal line */}
-        <div className={`h-[1px] w-4 border-t border-dashed ${lineTheme.lineColor}`} />
+        {/* Left segment of horizontal line (kept minimal so badges align left) */}
+        <div className={`h-[1px] w-0 border-t border-dashed ${lineTheme.lineColor}`} />
 
         {/* The beautiful premium label badge on the horizontal line without card container */}
-        <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold font-mono tracking-tight shrink-0 shadow-sm border ${lineTheme.badgeBg} ${lineTheme.text}`}>
+        <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-extrabold font-mono tracking-tight shrink-0 shadow-sm border ${lineTheme.badgeBg} ${lineTheme.text}`}>
           {event.type === 'sunrise' && (
             <>
               <Sunrise size={11} className={lineTheme.iconColor} />

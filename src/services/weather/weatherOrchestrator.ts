@@ -17,7 +17,6 @@ import type { ConcreteWeatherProvider } from './providerTypes';
 import { getWeatherProvider } from './providerRegistry';
 import type { ProviderRawBundle, WeatherLocationInput } from './sharedTypes';
 
-const CACHE_DURATION_MS = 10 * 60 * 1000;
 const weatherCache: Record<string, { data: WeatherFetchResult; timestamp: number }> = {};
 const inFlight = new Map<string, Promise<WeatherFetchResult>>();
 
@@ -139,6 +138,7 @@ export async function fetchWeatherForLocation(
   settings: UserSettings,
   signal?: AbortSignal
 ): Promise<WeatherFetchResult> {
+  const cacheDurationMs = Math.min(120, Math.max(1, settings.refreshIntervalMinutes || 10)) * 60_000;
   const primary = resolveProvider(location.country, settings);
   const chain =
     settings.provider === 'auto'
@@ -147,7 +147,7 @@ export async function fetchWeatherForLocation(
 
   const key = cacheKey(location, primary);
   const cached = weatherCache[key];
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION_MS) {
+  if (cached && Date.now() - cached.timestamp < cacheDurationMs) {
     return { ...cached.data, source: 'cached' };
   }
 
@@ -189,16 +189,14 @@ export async function fetchWeatherForLocation(
       ...successful.filter((entry) => entry.id !== resolvedPrimaryId),
     ];
 
-    if (resolvedPrimaryId !== primary) {
-      errors.unshift(`${primary} unavailable; using ${resolvedPrimaryId} as primary source.`);
-    }
-
     const finalResult = buildMergedResult(resolvedPrimaryId, locInput, ordered);
 
-    if (errors.length > 0 && finalResult.warnings.length === 0) {
+    // Fallback should be silent in the UI (keep console warnings above).
+    // Only surface warnings when the intended primary provider succeeded.
+    if (resolvedPrimaryId !== primary) {
+      finalResult.warnings = [];
+    } else if (errors.length > 0 && finalResult.warnings.length === 0) {
       finalResult.warnings.push(errors[0]);
-    } else if (resolvedPrimaryId !== primary) {
-      finalResult.warnings.unshift(`${primary} unavailable; using ${resolvedPrimaryId}.`);
     }
 
     weatherCache[cacheKey(location, resolvedPrimaryId)] = {
@@ -236,11 +234,13 @@ export async function fetchLiveWeather(
     apiKey,
     city,
     provider,
+    theme: 'system',
     tempUnit: 'C',
     windSpeedUnit: 'm/s',
     clockFormat: '24h',
     showSunriseSunset: true,
     showMoonriseMoonset: true,
+    refreshIntervalMinutes: 10,
     units: 'metric',
     activeLocation: location,
   };

@@ -316,8 +316,16 @@ export function buildForecast(input: ForecastBuildInput): ForecastBuildResult {
     country: country || '',
     lat,
     lon,
+    timeZone: input.timeZone,
+    timeZoneOffsetMinutes: input.timeZoneOffsetMinutes,
     current: input.current,
-    daily: assembleTimelineAndForecasts(input.currentTemp, hourly, daily),
+    daily: assembleTimelineAndForecasts(
+      input.currentTemp,
+      hourly,
+      daily,
+      input.timeZone,
+      input.timeZoneOffsetMinutes
+    ),
     forecastDayCount: daily.length,
     realForecastDayCount: realForecastDays,
   };
