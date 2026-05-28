@@ -103,10 +103,10 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
               id={`horizontal-pill-${idx}`}
               key={day.shortDate}
               onClick={() => handleDayClick(idx)}
-              className={`flex-1 min-w-[44px] flex flex-col items-center py-2.5 gap-0.5 border-b-2 transition-all duration-150 cursor-pointer ${
+              className={`flex-1 min-w-[44px] flex flex-col items-center py-2.5 gap-0.5 border-b-2 transition-all duration-150 cursor-pointer border-r border-r-[color:var(--sky-border)] last:border-r-0 ${
                 isSelected
-                  ? 'border-[color:var(--sky-fg)] opacity-100'
-                  : 'border-transparent opacity-50 hover:opacity-75'
+                  ? 'border-b-[color:var(--sky-fg)] opacity-100'
+                  : 'border-b-transparent opacity-50 hover:opacity-75'
               }`}
             >
               <span className="text-[11px] font-bold uppercase tracking-wide sky-mono text-[color:var(--sky-fg)]">

@@ -116,7 +116,7 @@ function instantTheme(type: string) {
         connector: 'bg-orange-200 dark:bg-orange-800/60',
         time: 'text-orange-500 dark:text-orange-400',
         pill: 'border-orange-300/60 dark:border-orange-700/60 text-white',
-        pillStyle: { background: 'linear-gradient(to right, #6366f1, #f97316, #fbbf24)' } as React.CSSProperties,
+        pillStyle: { background: 'linear-gradient(to right, #818cf8cc, #fb923ccc, #fcd34dcc)' } as React.CSSProperties,
         icon: 'text-white/90',
       };
     case 'sunset':
@@ -126,7 +126,7 @@ function instantTheme(type: string) {
         connector: 'bg-fuchsia-200 dark:bg-fuchsia-900/60',
         time: 'text-fuchsia-600 dark:text-fuchsia-400',
         pill: 'border-fuchsia-400/60 dark:border-fuchsia-700/60 text-white',
-        pillStyle: { background: 'linear-gradient(to right, #f97316, #e11d48, #7c3aed)' } as React.CSSProperties,
+        pillStyle: { background: 'linear-gradient(to right, #fb923ccc, #e879a0cc, #a855f7cc)' } as React.CSSProperties,
         icon: 'text-white/90',
       };
     case 'moonrise':
@@ -136,7 +136,7 @@ function instantTheme(type: string) {
         connector: 'bg-purple-300 dark:bg-purple-900/60',
         time: 'text-purple-700 dark:text-purple-400',
         pill: 'border-purple-500/60 dark:border-purple-700/60 text-white',
-        pillStyle: { background: 'linear-gradient(to right, #3b0764, #7c3aed)' } as React.CSSProperties,
+        pillStyle: { background: 'linear-gradient(to right, #4c1d95cc, #8b5cf6cc)' } as React.CSSProperties,
         icon: 'text-white/90',
       };
     case 'moonset':
@@ -146,7 +146,7 @@ function instantTheme(type: string) {
         connector: 'bg-violet-300 dark:bg-violet-900/60',
         time: 'text-violet-600 dark:text-violet-400',
         pill: 'border-violet-400/60 dark:border-violet-700/60 text-white',
-        pillStyle: { background: 'linear-gradient(to right, #7c3aed, #3b0764)' } as React.CSSProperties,
+        pillStyle: { background: 'linear-gradient(to right, #8b5cf6cc, #4c1d95cc)' } as React.CSSProperties,
         icon: 'text-white/90',
       };
     case 'peak_temp':
@@ -272,7 +272,7 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz }) => {
       {/* Sticky first row: icon + description pins at top while card scrolls out */}
       <div
         className="sticky flex items-stretch"
-        style={{ top: 'var(--sky-top-stack-h, 0px)', zIndex: 15, background: 'inherit' }}
+        style={{ top: 'var(--sky-top-stack-h, 0px)', zIndex: 15, ...rowStyle }}
       >
         <div className="w-12 shrink-0 flex items-center justify-end pr-2">
           <span className="text-[12px] sky-mono font-medium text-[color:var(--sky-dim)]">
