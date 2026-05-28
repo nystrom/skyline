@@ -12,7 +12,7 @@ import { geocodedToSaved, locationId } from './utils/savedLocation';
 import { WeatherHeader } from './components/WeatherHeader';
 import { DailyScroller } from './components/DailyScroller';
 import { WeatherTimeline } from './components/WeatherTimeline';
-import { RefreshCw } from 'lucide-react';
+import { WeatherIcon } from './components/WeatherIcon';
 
 const ACTIVE_LOCATION_KEY = 'sky_timeline_active_location';
 
@@ -294,11 +294,14 @@ export default function App() {
               />
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500 font-mono space-y-4 min-h-[400px]">
-              <RefreshCw size={36} className="text-emerald-500 animate-spin" />
-              <div className="space-y-1">
-                <p className="font-bold text-slate-700 dark:text-slate-300 text-sm">Synchronizing Atmosphere Fields...</p>
-                <p className="text-xs text-slate-400">Loading weather data</p>
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[400px]">
+              <div className="flex items-center gap-2">
+                <span className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400">
+                  <WeatherIcon name="sun" size={22} className="animate-spin-slow text-emerald-400" />
+                </span>
+                <span className="text-lg font-bold tracking-tight font-sans text-slate-700 dark:text-slate-200">
+                  Skyline
+                </span>
               </div>
             </div>
           )}
