@@ -183,6 +183,24 @@
   }
 }
 
+/* Keep header + day scroller pinned while timeline scrolls. */
+#weather-timeline-container {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* On mobile, force the phone shell to fill the viewport so the timeline (not the page) scrolls. */
+@media (max-width: 768px) {
+  #app-root-container {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  #phone-skin-container {
+    height: 100dvh;
+  }
+}
+
 /* User preference: no rounded corners anywhere in app UI */
 #app-root-container *,
 #app-root-container *::before,
