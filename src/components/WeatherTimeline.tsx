@@ -112,11 +112,12 @@ function instantTheme(type: string) {
     case 'sunrise':
       return {
         dot: 'bg-orange-400',
-        ring: 'ring-rose-200 dark:ring-rose-900/60',
+        ring: 'ring-orange-200 dark:ring-orange-900/60',
         connector: 'bg-orange-200 dark:bg-orange-800/60',
         time: 'text-orange-500 dark:text-orange-400',
-        pill: 'bg-rose-50/90 dark:bg-rose-950/60 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300',
-        icon: 'text-orange-500 dark:text-orange-400',
+        pill: 'border-orange-300/60 dark:border-orange-700/60 text-white',
+        pillStyle: { background: 'linear-gradient(to right, #6366f1, #f97316, #fbbf24)' } as React.CSSProperties,
+        icon: 'text-white/90',
       };
     case 'sunset':
       return {
@@ -266,42 +267,51 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz }) => {
 
   return (
     <div className="border-b border-black/[0.04]" style={rowStyle}>
-      {events.map((evt, idx) => (
+      {/* Sticky first row: icon + description pins at top while card scrolls out */}
+      <div
+        className="sticky flex items-stretch"
+        style={{ top: 'var(--sky-top-stack-h, 0px)', zIndex: 15, background: 'inherit' }}
+      >
+        <div className="w-12 shrink-0 flex items-center justify-end pr-2">
+          <span className="text-[12px] sky-mono font-medium text-[color:var(--sky-dim)]">
+            {formatTimeAtLocation(events[0].time, '24h', tz)}
+          </span>
+        </div>
+        <LineCol />
+        <div className="flex-1 min-w-0 flex items-center py-[11px] pr-4 gap-3">
+          <WeatherIcon
+            name={first.iconName}
+            size={15}
+            className="shrink-0 text-[color:var(--sky-muted)]"
+          />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] capitalize truncate">
+                {first.description}
+              </span>
+              {showRain && (
+                <span className="text-[11px] sky-mono text-[color:var(--sky-dim)] shrink-0">
+                  {first.precipProb}% rain
+                </span>
+              )}
+            </div>
+          </div>
+          <WindTemp event={events[0]} settings={settings} />
+        </div>
+      </div>
+
+      {/* Remaining rows: time + line + wind/temp only */}
+      {events.slice(1).map((evt) => (
         <div key={evt.id} className="flex items-stretch">
-          {/* Time */}
           <div className="w-12 shrink-0 flex items-center justify-end pr-2">
             <span className="text-[12px] sky-mono font-medium text-[color:var(--sky-dim)]">
               {formatTimeAtLocation(evt.time, '24h', tz)}
             </span>
           </div>
-
           <LineCol />
-
-          {/* Content */}
           <div className="flex-1 min-w-0 flex items-center py-[11px] pr-4 gap-3">
-            {idx === 0 ? (
-              <WeatherIcon
-                name={first.iconName}
-                size={15}
-                className="shrink-0 text-[color:var(--sky-muted)]"
-              />
-            ) : (
-              <span className="w-[15px] shrink-0" />
-            )}
-            <div className="flex-1 min-w-0">
-              {idx === 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] capitalize truncate">
-                    {first.description}
-                  </span>
-                  {showRain && (
-                    <span className="text-[11px] sky-mono text-[color:var(--sky-dim)] shrink-0">
-                      {first.precipProb}% rain
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
+            <span className="w-[15px] shrink-0" />
+            <div className="flex-1 min-w-0" />
             <WindTemp event={evt} settings={settings} />
           </div>
         </div>
@@ -342,7 +352,7 @@ const InstantRow: React.FC<InstantRowProps> = ({ event, settings, tz }) => {
     >
       {/* Time: colored accent, right-aligned */}
       <div className="w-12 shrink-0 flex items-center justify-end pr-2">
-        <span className={`text-[11px] sky-mono font-bold ${theme.time}`}>
+        <span className={`text-[12px] sky-mono font-medium ${theme.time}`}>
           {displayTime}
         </span>
       </div>
