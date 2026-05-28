@@ -13,6 +13,8 @@ import { WeatherHeader } from './components/WeatherHeader';
 import { DailyScroller } from './components/DailyScroller';
 import { WeatherTimeline } from './components/WeatherTimeline';
 import { WeatherIcon } from './components/WeatherIcon';
+import { LocationsScreen } from './components/LocationsScreen';
+import { AnimatePresence } from 'motion/react';
 
 const ACTIVE_LOCATION_KEY = 'sky_timeline_active_location';
 const THEME_KEY = 'sky_timeline_theme';
@@ -102,6 +104,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [activeDayIdx, setActiveDayIdx] = useState(0);
+  const [activeScreen, setActiveScreen] = useState<'home' | 'locations'>('home');
   const loadAbortRef = useRef<AbortController | null>(null);
   const scrollSpyBlockedRef = useRef(false);
   const topStackRef = useRef<HTMLDivElement>(null);
@@ -320,85 +323,70 @@ export default function App() {
   return (
     <div
       id="app-root-container"
-      className="sky-app min-h-screen flex justify-center items-start md:items-center py-0 md:py-6 antialiased selection:bg-[color:rgba(124,246,255,0.22)]"
+      className="sky-app min-h-screen flex justify-center items-start md:items-center md:py-8 antialiased"
     >
-      <div className="sky-atmos" />
-      <div className="sky-noise" />
-
       <div
         id="phone-skin-container"
-        className="sky-phone w-full max-w-md md:rounded-[40px] md:border-8 md:border-black/40 flex flex-col min-h-screen md:min-h-[812px] md:max-h-[850px] overflow-hidden"
+        className="sky-phone w-full max-w-sm flex flex-col min-h-screen md:min-h-0 md:max-h-[820px] md:rounded-3xl overflow-hidden relative"
       >
-        <div className="hidden md:flex items-center justify-between px-6 pt-3 pb-1.5 text-[9px] select-none rounded-t-[30px] border-b border-white/10 bg-black/25 sky-mono text-[color:var(--sky-dim)]">
-          <div className="flex items-center gap-1">
-            <span>NETWORK SOL_NET</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--sky-accent-2)] animate-pulse" />
-          </div>
-          <div className="w-24 h-4 bg-black/30 rounded-full border border-white/10" />
-          <div className="flex items-center gap-1">
-            <span>100% ELEVATED</span>
-          </div>
-        </div>
-
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-transparent">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
           {displayData ? (
-            <>
-              <div
-                id="weather-timeline-container"
-                className="flex-1 min-h-0 overflow-y-auto scrollbar-none rounded-t-3xl shadow-inner relative z-10 border-t border-[color:var(--sky-border)]"
-                style={{ background: 'linear-gradient(180deg, var(--sky-card), transparent)' }}
-              >
-                <div id="weather-top-stack" ref={topStackRef} className="sticky top-0 z-30">
-                  <WeatherHeader
-                    weatherData={displayData}
-                    settings={settings}
-                    updateSettings={updateSettings}
-                    isLoading={isLoading}
-                    onRefresh={handleRefresh}
-                    errorMsg={errorMsg}
-                    fetchWarnings={fetchWarnings}
-                    onDismissError={() => setErrorMsg(null)}
-                    onDismissWarnings={() => setFetchWarnings([])}
-                    dataSource={dataSource}
-                    onSelectNow={handleSelectNow}
-                  />
-
-                  <DailyScroller
-                    daily={displayData.daily}
-                    selectedDayIdx={activeDayIdx}
-                    onSelectDay={setActiveDayIdx}
-                    onBeforeTimelineScroll={blockScrollSpy}
-                    settings={settings}
-                  />
-                </div>
-
-                <WeatherTimeline
-                  daily={displayData.daily}
+            <div
+              id="weather-timeline-container"
+              className="flex-1 min-h-0 overflow-y-auto scrollbar-none relative z-10"
+            >
+              <div id="weather-top-stack" ref={topStackRef} className="sticky top-0 z-30">
+                <WeatherHeader
+                  weatherData={displayData}
                   settings={settings}
-                  activeDayIdx={activeDayIdx}
-                  onActiveDayChange={setActiveDayIdx}
-                  scrollSpyBlockedRef={scrollSpyBlockedRef}
-                  timeZone={displayData.timeZone}
-                  timeZoneOffsetMinutes={displayData.timeZoneOffsetMinutes}
+                  updateSettings={updateSettings}
+                  isLoading={isLoading}
+                  onRefresh={handleRefresh}
+                  errorMsg={errorMsg}
+                  fetchWarnings={fetchWarnings}
+                  onDismissError={() => setErrorMsg(null)}
+                  onDismissWarnings={() => setFetchWarnings([])}
+                  dataSource={dataSource}
+                  onSelectNow={handleSelectNow}
+                  onOpenLocations={() => setActiveScreen('locations')}
+                />
+                <DailyScroller
+                  daily={displayData.daily}
+                  selectedDayIdx={activeDayIdx}
+                  onSelectDay={setActiveDayIdx}
+                  onBeforeTimelineScroll={blockScrollSpy}
+                  settings={settings}
                 />
               </div>
-            </>
+              <WeatherTimeline
+                daily={displayData.daily}
+                settings={settings}
+                activeDayIdx={activeDayIdx}
+                onActiveDayChange={setActiveDayIdx}
+                scrollSpyBlockedRef={scrollSpyBlockedRef}
+                timeZone={displayData.timeZone}
+                timeZoneOffsetMinutes={displayData.timeZoneOffsetMinutes}
+              />
+            </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[400px]">
               <div className="flex items-center gap-2">
-                <span className="p-2 rounded-2xl text-[color:var(--sky-accent)] border border-white/10 bg-white/5 sky-accent-glow">
-                  <WeatherIcon name="sun" size={22} className="animate-spin-slow text-[color:var(--sky-accent)]" />
-                </span>
+                <WeatherIcon name="sun" size={22} className="animate-spin-slow text-[color:var(--sky-accent)]" />
                 <span className="sky-title text-lg font-bold tracking-tight text-[color:var(--sky-fg)]">
                   Skyline
                 </span>
               </div>
             </div>
           )}
-        </div>
-
-        <div className="hidden md:block py-2 bg-black/25 border-t border-white/10 rounded-b-[30px] shrink-0 text-center">
-          <div className="w-28 h-1 bg-white/15 rounded-full mx-auto" />
+          <AnimatePresence>
+            {activeScreen === 'locations' && (
+              <LocationsScreen
+                settings={settings}
+                updateSettings={updateSettings}
+                onClose={() => setActiveScreen('home')}
+              />
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>

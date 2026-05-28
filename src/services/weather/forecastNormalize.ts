@@ -85,7 +85,7 @@ export function mergeDailyLayers(layers: StandardDailyPoint[][]): StandardDailyP
 
 function rawSlotToStandard(slot: RawHourlySlot, interpolated: boolean): StandardHourlyPoint {
   const code = coalesceNumber(slot.weatherCode, 0);
-  const isDay = slot.isDay === 1 || slot.isDay === true;
+  const isDay = slot.isDay === true;
   return {
     time: slot.time,
     temp: coalesceNumber(slot.temp),
@@ -201,7 +201,7 @@ export function interpolateHourlyGrid(
     }
 
     const code = coalesceNumber(skySource?.weatherCode, 0);
-    const isDay = skySource?.isDay === 1 || skySource?.isDay === true;
+    const isDay = skySource?.isDay === true;
 
     result.push({
       time: new Date(t),
@@ -324,7 +324,8 @@ export function buildForecast(input: ForecastBuildInput): ForecastBuildResult {
       hourly,
       daily,
       input.timeZone,
-      input.timeZoneOffsetMinutes
+      input.timeZoneOffsetMinutes,
+      input.current,
     ),
     forecastDayCount: daily.length,
     realForecastDayCount: realForecastDays,
@@ -351,7 +352,7 @@ export function mergeOpenMeteoHourlyRaw(
       weatherCode: code ?? null,
       description: code != null ? wmoToDescFn(code) : null,
       iconName: code != null ? wmoToIconFn(code, isDay) : null,
-      isDay: hourly.is_day?.[i] ?? null,
+      isDay: hourly.is_day?.[i] === 1 ? true : hourly.is_day?.[i] === 0 ? false : null,
       windSpeed: hourly.wind_speed_10m?.[i] ?? null,
       windDeg: hourly.wind_direction_10m?.[i] ?? null,
       precipProb: hourly.precipitation_probability?.[i] ?? null,

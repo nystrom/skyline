@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Flame, Sunrise, Sunset, Moon, Wind } from 'lucide-react';
 import { DailyForecast, UserSettings, WeatherTimelineEvent } from '../types';
-import { TimelineMarkerCard } from './TimelineMarkerCard';
 import { WeatherIcon } from './WeatherIcon';
-import { convertTemp, convertWindSpeed } from '../utils/unitConverter';
 import { WindDirectionArrow } from './WindDirectionArrow';
-import { conditionCardStyle } from '../utils/conditionPalette';
+import { convertTemp, convertWindSpeed, formatTimeAtLocation } from '../utils/unitConverter';
+import { conditionRowStyle } from '../utils/conditionPalette';
 
 interface WeatherTimelineProps {
   daily: DailyForecast[];
@@ -20,6 +20,8 @@ interface WeatherTimelineProps {
   timeZone?: string;
   timeZoneOffsetMinutes?: number;
 }
+
+type TZ = { timeZone?: string; offsetMinutes?: number };
 
 const SCROLL_SPY_THRESHOLD_PX = 12;
 
@@ -50,102 +52,370 @@ function computeVisibleDayIndex(container: HTMLElement, dayCount: number): numbe
   return activeIdx;
 }
 
-interface GroupedTimelineItem {
-  type: 'special' | 'merged_hourly';
+interface GroupedItem {
+  type: 'single' | 'merged';
   events: WeatherTimelineEvent[];
 }
 
-export const MergedHourlyCard: React.FC<{ events: WeatherTimelineEvent[]; settings: UserSettings }> = ({ events, settings }) => {
-  const firstEvent = events[0];
-  const hasRain = events.some(e => e.precipProb !== undefined && e.precipProb > 10);
-  const maxRain = hasRain ? Math.max(...events.map(e => e.precipProb || 0)) : 0;
-  const condStyle = conditionCardStyle(firstEvent?.iconName, firstEvent?.description);
+function groupHourly(events: WeatherTimelineEvent[]): GroupedItem[] {
+  const result: GroupedItem[] = [];
+  let run: WeatherTimelineEvent[] = [];
+
+  const flushRun = () => {
+    if (run.length === 0) return;
+    result.push({ type: run.length === 1 ? 'single' : 'merged', events: run });
+    run = [];
+  };
+
+  for (const evt of events) {
+    if (evt.type !== 'hourly_status' && evt.type !== 'now') {
+      flushRun();
+      result.push({ type: 'single', events: [evt] });
+      continue;
+    }
+    // 'now' is always its own instantaneous marker
+    if (evt.type === 'now') {
+      flushRun();
+      result.push({ type: 'single', events: [evt] });
+      continue;
+    }
+    if (run.length === 0) {
+      run.push(evt);
+    } else {
+      const same = run[0].description.trim().toLowerCase() === evt.description.trim().toLowerCase();
+      if (same) {
+        run.push(evt);
+      } else {
+        flushRun();
+        run.push(evt);
+      }
+    }
+  }
+  flushRun();
+
+  return result;
+}
+
+const INSTANT_TYPES = new Set(['now', 'sunrise', 'sunset', 'moonrise', 'moonset', 'peak_temp', 'wind_shift']);
+
+function instantTheme(type: string) {
+  switch (type) {
+    case 'now':
+      return {
+        dot: 'bg-blue-500',
+        ring: 'ring-blue-200 dark:ring-blue-900/60',
+        connector: 'bg-blue-200 dark:bg-blue-800/60',
+        time: 'text-blue-500 dark:text-blue-400',
+        pill: 'bg-blue-50/90 dark:bg-blue-950/60 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200',
+        icon: 'text-blue-500 dark:text-blue-400',
+      };
+    case 'sunrise':
+      return {
+        dot: 'bg-amber-400',
+        ring: 'ring-amber-200 dark:ring-amber-900/60',
+        connector: 'bg-amber-200 dark:bg-amber-800/60',
+        time: 'text-amber-500 dark:text-amber-400',
+        pill: 'bg-amber-50/90 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200',
+        icon: 'text-amber-500 dark:text-amber-400',
+      };
+    case 'sunset':
+      return {
+        dot: 'bg-indigo-500',
+        ring: 'ring-indigo-200 dark:ring-indigo-900/60',
+        connector: 'bg-indigo-200 dark:bg-indigo-800/60',
+        time: 'text-indigo-500 dark:text-indigo-400',
+        pill: 'bg-indigo-50/90 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-800 text-indigo-800 dark:text-indigo-200',
+        icon: 'text-indigo-500 dark:text-indigo-400',
+      };
+    case 'moonrise':
+      return {
+        dot: 'bg-purple-500',
+        ring: 'ring-purple-200 dark:ring-purple-900/60',
+        connector: 'bg-purple-200 dark:bg-purple-800/60',
+        time: 'text-purple-500 dark:text-purple-400',
+        pill: 'bg-purple-50/90 dark:bg-purple-950/60 border-purple-200 dark:border-purple-800 text-purple-800 dark:text-purple-200',
+        icon: 'text-purple-500 dark:text-purple-400',
+      };
+    case 'moonset':
+      return {
+        dot: 'bg-slate-500',
+        ring: 'ring-slate-200 dark:ring-slate-700/60',
+        connector: 'bg-slate-200 dark:bg-slate-700/60',
+        time: 'text-slate-500 dark:text-slate-400',
+        pill: 'bg-slate-50/90 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300',
+        icon: 'text-slate-500 dark:text-slate-400',
+      };
+    case 'peak_temp':
+      return {
+        dot: 'bg-rose-500',
+        ring: 'ring-rose-200 dark:ring-rose-900/60',
+        connector: 'bg-rose-200 dark:bg-rose-800/60',
+        time: 'text-rose-500 dark:text-rose-400',
+        pill: 'bg-rose-50/90 dark:bg-rose-950/60 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200',
+        icon: 'text-rose-500 dark:text-rose-400',
+      };
+    case 'wind_shift':
+      return {
+        dot: 'bg-emerald-500',
+        ring: 'ring-emerald-200 dark:ring-emerald-900/60',
+        connector: 'bg-emerald-200 dark:bg-emerald-800/60',
+        time: 'text-emerald-500 dark:text-emerald-400',
+        pill: 'bg-emerald-50/90 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200',
+        icon: 'text-emerald-500 dark:text-emerald-400',
+      };
+    default:
+      return {
+        dot: 'bg-slate-400',
+        ring: 'ring-slate-200 dark:ring-slate-700/60',
+        connector: 'bg-slate-200 dark:bg-slate-700/60',
+        time: 'text-slate-400 dark:text-slate-500',
+        pill: 'bg-slate-50/90 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400',
+        icon: 'text-slate-400',
+      };
+  }
+}
+
+/* ── Shared line column ── */
+interface LineColProps {
+  dot?: React.ReactNode;
+}
+
+const LineCol: React.FC<LineColProps> = ({ dot }) => (
+  <div className="w-5 shrink-0 relative flex justify-center items-center self-stretch">
+    {/* Continuous vertical line */}
+    <div className="absolute top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-700/50 left-1/2 -translate-x-1/2" />
+    {dot && <div className="relative z-10">{dot}</div>}
+  </div>
+);
+
+/* ── Wind + temp block ── */
+const WindTemp: React.FC<{ event: WeatherTimelineEvent; settings: UserSettings }> = ({ event, settings }) => (
+  <div className="flex items-center gap-2 shrink-0">
+    <span className="text-[11px] sky-mono text-[color:var(--sky-dim)] flex items-center gap-[3px]">
+      <WindDirectionArrow
+        deg={(event.windSpeed ?? 0) <= 0 ? 0 : (event.windDeg ?? 0)}
+        size={9}
+      />
+      {convertWindSpeed(event.windSpeed ?? 0, settings.windSpeedUnit)}{' '}{settings.windSpeedUnit}
+    </span>
+    <span className="text-[15px] font-bold tabular-nums text-[color:var(--sky-fg)] w-9 text-right">
+      {convertTemp(event.temp ?? 0, settings.tempUnit)}°
+    </span>
+  </div>
+);
+
+/* ── Single hourly row ── */
+interface HourlyRowProps {
+  event: WeatherTimelineEvent;
+  settings: UserSettings;
+  tz: TZ;
+}
+
+const HourlyRow: React.FC<HourlyRowProps> = ({ event, settings, tz }) => {
+  const rowStyle = conditionRowStyle(event.iconName, event.description, event.precipProb);
+  const showRain = (event.precipProb ?? 0) > 5;
 
   return (
-    <div className="flex items-stretch gap-4 py-1.5 pl-2 pr-2 relative">
-      {/* Left side: Time labels, stacked vertically - alignment matched exactly with rows */}
-      <div className="w-10 shrink-0 flex flex-col py-2">
-        {events.map(evt => (
-          <div 
-            key={evt.id} 
-            className="h-[72px] flex items-center justify-end sky-mono text-[12px] font-bold text-[color:var(--sky-dim)]"
-          >
-            {evt.hourLabel.replace(':00', '')}
-          </div>
-        ))}
+    <div className="flex items-stretch border-b border-black/[0.04]" style={rowStyle}>
+      {/* Time */}
+      <div className="w-12 shrink-0 flex items-center justify-end pr-2">
+        <span className="text-[12px] sky-mono font-medium text-[color:var(--sky-dim)]">
+          {formatTimeAtLocation(event.time, '24h', tz)}
+        </span>
       </div>
 
-      {/* Center column spacing bridge to align perfectly with single timeline markers */}
-      <div className="w-3 shrink-0" />
+      <LineCol />
 
-      {/* Right side: Unified continuous background card block with the requested layout */}
-      <div
-        className="flex-1 min-w-0 px-3.5 py-2 rounded-2xl flex flex-col transition-all duration-150 relative border"
-        style={condStyle}
-      >
-        <div className="flex flex-col flex-grow divide-y divide-white/5">
-          {events.map((evt, idx) => {
-            return (
-              <div 
-                key={evt.id} 
-                className="h-[72px] flex items-center justify-between py-1 relative"
-              >
-                {/* Left part: Icon at top, Condition text below, wrapping correctly */}
-                <div className="flex-1 flex flex-col items-start justify-center min-w-0 h-full relative">
-                  {idx === 0 ? (
-                    <div className="flex flex-col items-start gap-1 py-1 w-full">
-                      <div className="p-1 rounded text-[color:var(--sky-muted)] shrink-0">
-                        <WeatherIcon name={firstEvent.iconName} size={15} className="text-[color:var(--sky-warn)]" />
-                      </div>
-                      <div className="flex flex-col items-start w-full">
-                        <span className="text-[12px] font-bold text-[color:var(--sky-fg)] capitalize whitespace-normal break-words leading-none w-full">
-                          {firstEvent.description}
-                        </span>
-                        {hasRain && (
-                          <span className="text-[10px] text-[color:var(--sky-dim)] font-bold sky-mono shrink-0 mt-0.5">
-                            {maxRain}% Rain
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
+      {/* Content */}
+      <div className="flex-1 min-w-0 flex items-center py-[11px] pr-4 gap-3">
+        <WeatherIcon
+          name={event.iconName}
+          size={15}
+          className="shrink-0 text-[color:var(--sky-muted)]"
+        />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] capitalize truncate leading-tight">
+              {event.description}
+            </span>
+          </div>
+          {showRain && (
+            <span className="text-[11px] sky-mono text-[color:var(--sky-dim)] mt-[2px] block">
+              {event.precipProb}% rain
+            </span>
+          )}
+        </div>
+        <WindTemp event={event} settings={settings} />
+      </div>
+    </div>
+  );
+};
 
-                {/* Left divider line simulating '|' */}
-                <div className="h-5 w-[1px] bg-[color:var(--sky-border)] mx-2 shrink-0" />
+/* ── Merged block for consecutive same-condition hours ── */
+interface MergedCardProps {
+  events: WeatherTimelineEvent[];
+  settings: UserSettings;
+  tz: TZ;
+}
 
-                {/* Middle part: Wind Speed column */}
-                <div className="relative w-20 h-full flex items-center justify-end shrink-0">
-                  <div className="flex items-center gap-1.5 sky-mono text-[11px] text-[color:var(--sky-dim)] z-10">
-                    <WindDirectionArrow
-                      deg={(evt.windSpeed ?? 0) <= 0 ? 0 : (evt.windDeg ?? 0)}
-                      size={10}
-                      title={`Wind direction: ${evt.windDeg}°`}
-                    />
-                    <span className="font-semibold text-[color:var(--sky-muted)]">
-                      {convertWindSpeed(evt.windSpeed, settings.windSpeedUnit)} {settings.windSpeedUnit}
-                    </span>
-                  </div>
-                </div>
+const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz }) => {
+  const first = events[0];
+  const rowStyle = conditionRowStyle(first.iconName, first.description, first.precipProb);
+  const showRain = (first.precipProb ?? 0) > 5;
 
-                {/* Right divider line simulating '|' */}
-                <div className="h-5 w-[1px] bg-[color:var(--sky-border)] mx-2 shrink-0" />
+  return (
+    <div className="border-b border-black/[0.04]" style={rowStyle}>
+      {events.map((evt, idx) => (
+        <div key={evt.id} className="flex items-stretch">
+          {/* Time */}
+          <div className="w-12 shrink-0 flex items-center justify-end pr-2">
+            <span className="text-[12px] sky-mono font-medium text-[color:var(--sky-dim)]">
+              {formatTimeAtLocation(evt.time, '24h', tz)}
+            </span>
+          </div>
 
-                {/* Right part: Temperature column */}
-                <div className="relative w-12 h-full flex items-center justify-end shrink-0">
-                  <span className="text-base font-extrabold text-[color:var(--sky-fg)] z-10">
-                    {convertTemp(evt.temp ?? 0, settings.tempUnit)}°
+          <LineCol />
+
+          {/* Content */}
+          <div className="flex-1 min-w-0 flex items-center py-[11px] pr-4 gap-3">
+            {idx === 0 ? (
+              <WeatherIcon
+                name={first.iconName}
+                size={15}
+                className="shrink-0 text-[color:var(--sky-muted)]"
+              />
+            ) : (
+              <span className="w-[15px] shrink-0" />
+            )}
+            <div className="flex-1 min-w-0">
+              {idx === 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] capitalize truncate">
+                    {first.description}
                   </span>
+                  {showRain && (
+                    <span className="text-[11px] sky-mono text-[color:var(--sky-dim)] shrink-0">
+                      {first.precipProb}% rain
+                    </span>
+                  )}
                 </div>
-              </div>
-            );
-          })}
+              )}
+            </div>
+            <WindTemp event={evt} settings={settings} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/* ── Instantaneous event row (now / sunrise / sunset / moonrise / moonset / peak_temp / wind_shift) ── */
+interface InstantRowProps {
+  event: WeatherTimelineEvent;
+  settings: UserSettings;
+  tz: TZ;
+}
+
+const InstantRow: React.FC<InstantRowProps> = ({ event, settings, tz }) => {
+  const theme = instantTheme(event.type);
+  const [nowTick, setNowTick] = useState(() => new Date());
+
+  useEffect(() => {
+    if (event.type !== 'now') return;
+    const id = window.setInterval(() => setNowTick(new Date()), 1000);
+    return () => window.clearInterval(id);
+  }, [event.type]);
+
+  const displayTime = event.type === 'now'
+    ? formatTimeAtLocation(nowTick, settings.clockFormat, tz)
+    : formatTimeAtLocation(event.time, settings.clockFormat, tz);
+
+  const dot = (
+    <div className={`w-2.5 h-2.5 rounded-full ring-2 ${theme.dot} ${theme.ring}`} />
+  );
+
+  return (
+    <div
+      id={event.type === 'now' ? 'timeline-event-now' : `timeline-instant-${event.id}`}
+      className="flex items-center py-[5px]"
+    >
+      {/* Time: colored accent, right-aligned */}
+      <div className="w-12 shrink-0 flex items-center justify-end pr-2">
+        <span className={`text-[11px] sky-mono font-bold ${theme.time}`}>
+          {displayTime}
+        </span>
+      </div>
+
+      {/* Line col with colored dot */}
+      <LineCol dot={dot} />
+
+      {/* Horizontal connector + pill */}
+      <div className="flex-1 pr-4 flex items-center gap-0">
+        <div className={`h-px w-3 shrink-0 ${theme.connector}`} />
+        <div className={`flex items-center gap-1.5 px-2.5 py-[4px] rounded-full text-[11px] font-bold border shrink-0 ${theme.pill}`}>
+          {event.type === 'sunrise' && (
+            <>
+              <Sunrise size={10} className={theme.icon} />
+              <span className="uppercase tracking-wide">Sunrise</span>
+            </>
+          )}
+          {event.type === 'sunset' && (
+            <>
+              <Sunset size={10} className={theme.icon} />
+              <span className="uppercase tracking-wide">Sunset</span>
+            </>
+          )}
+          {event.type === 'moonrise' && (
+            <>
+              <Moon size={10} className={theme.icon} />
+              <span className="uppercase tracking-wide">Moonrise</span>
+            </>
+          )}
+          {event.type === 'moonset' && (
+            <>
+              <Moon size={10} className={theme.icon} />
+              <span className="uppercase tracking-wide">Moonset</span>
+            </>
+          )}
+          {event.type === 'peak_temp' && (
+            <>
+              <Flame size={10} className={theme.icon} />
+              <span className="uppercase tracking-wide">High</span>
+              <span>{convertTemp(event.tempMax ?? event.temp ?? 0, settings.tempUnit)}°</span>
+            </>
+          )}
+          {event.type === 'now' && (
+            <>
+              <WeatherIcon name="locate" size={10} className={theme.icon} />
+              <span className="uppercase tracking-wide">Now</span>
+              <span className="font-normal opacity-70 text-[10px]">·</span>
+              <span className="font-normal capitalize">{event.description}</span>
+              <span className="font-bold">{convertTemp(event.temp ?? 0, settings.tempUnit)}°</span>
+            </>
+          )}
+          {event.type === 'wind_shift' && (
+            <>
+              <Wind size={10} className={theme.icon} />
+              <span className="uppercase tracking-wide">Wind Shift</span>
+              {event.windFromDeg !== undefined && event.windDeg !== undefined && (
+                <>
+                  <WindDirectionArrow deg={event.windFromDeg} size={10} className={theme.icon} />
+                  <span className="opacity-50 text-[9px]">→</span>
+                  <WindDirectionArrow deg={event.windDeg} size={10} className={theme.icon} />
+                </>
+              )}
+              {event.windSpeed !== undefined && (
+                <span>{convertWindSpeed(event.windSpeed, settings.windSpeedUnit)} {settings.windSpeedUnit}</span>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
+/* ── Main timeline ── */
 export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
   daily,
   settings,
@@ -156,6 +426,7 @@ export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
   timeZoneOffsetMinutes,
 }) => {
   const activeDayRef = useRef(activeDayIdx);
+  const tz: TZ = { timeZone, offsetMinutes: timeZoneOffsetMinutes };
 
   useEffect(() => {
     activeDayRef.current = activeDayIdx;
@@ -167,7 +438,6 @@ export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
 
     const syncActiveDay = () => {
       if (scrollSpyBlockedRef?.current) return;
-
       const nextIdx = computeVisibleDayIndex(container, daily.length);
       if (nextIdx !== activeDayRef.current) {
         onActiveDayChange(nextIdx);
@@ -178,138 +448,55 @@ export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
     container.addEventListener('scroll', syncActiveDay, { passive: true });
     return () => container.removeEventListener('scroll', syncActiveDay);
   }, [daily.length, onActiveDayChange, scrollSpyBlockedRef]);
-  // Core helper to cluster sequential standard hourly_status events of same sky condition (description)
-  const groupTimelineEvents = (events: WeatherTimelineEvent[]): GroupedTimelineItem[] => {
-    const grouped: GroupedTimelineItem[] = [];
-    let currentHourlyGroup: WeatherTimelineEvent[] = [];
 
-    for (const evt of events) {
-      if (evt.isSpecial) {
-        // Handle buffered hourly group first before processing special events
-        if (currentHourlyGroup.length > 0) {
-          grouped.push({
-            type: 'merged_hourly',
-            events: currentHourlyGroup
-          });
-          currentHourlyGroup = [];
-        }
-        grouped.push({ type: 'special', events: [evt] });
-      } else {
-        // Standard hourly weather events
-        if (currentHourlyGroup.length === 0) {
-          currentHourlyGroup.push(evt);
-        } else {
-          const firstDesc = currentHourlyGroup[0].description.trim().toLowerCase();
-          const targetDesc = evt.description.trim().toLowerCase();
-          if (firstDesc === targetDesc) {
-            currentHourlyGroup.push(evt);
-          } else {
-            // Push previous group and start new group
-            grouped.push({
-              type: 'merged_hourly',
-              events: currentHourlyGroup
-            });
-            currentHourlyGroup = [evt];
-          }
-        }
+  const renderItem = (item: GroupedItem): React.ReactNode => {
+    const evt = item.events[0];
+
+    if (item.type === 'merged') {
+      return <MergedCard key={evt.id} events={item.events} settings={settings} tz={tz} />;
+    }
+
+    if (INSTANT_TYPES.has(evt.type)) {
+      if (evt.type === 'sunrise' || evt.type === 'sunset') {
+        if (!settings.showSunriseSunset) return null;
       }
+      if (evt.type === 'moonrise' || evt.type === 'moonset') {
+        if (!settings.showMoonriseMoonset) return null;
+      }
+      return <InstantRow key={evt.id} event={evt} settings={settings} tz={tz} />;
     }
 
-    // Flush final buffer
-    if (currentHourlyGroup.length > 0) {
-      grouped.push({
-        type: 'merged_hourly',
-        events: currentHourlyGroup
-      });
-    }
-
-    return grouped;
+    return <HourlyRow key={evt.id} event={evt} settings={settings} tz={tz} />;
   };
 
   return (
-    <div className="px-4 py-5 pb-24">
-      <div className="relative">
-        <div className="absolute left-[62px] top-2 bottom-8 w-0.5 bg-[color:var(--sky-border)] pointer-events-none" />
+    <div className="pb-20">
+      {daily.map((day, dIdx) => {
+        const isSelectedDay = activeDayIdx === dIdx;
+        const items = groupHourly(day.timelineEvents);
 
-        {daily.map((day, dIdx) => {
-          const isSelectedDay = activeDayIdx === dIdx;
-
-          const filteredEvents = day.timelineEvents.filter((evt) => {
-            if (evt.type === 'sunrise' || evt.type === 'sunset') return settings.showSunriseSunset;
-            if (evt.type === 'moonrise' || evt.type === 'moonset') return settings.showMoonriseMoonset;
-            return true;
-          });
-
-          return (
+        return (
+          <div
+            key={day.shortDate}
+            id={`timeline-day-anchor-${dIdx}`}
+            className={`transition-opacity duration-300 ${isSelectedDay ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
+          >
             <div
-              key={day.shortDate}
-              id={`timeline-day-anchor-${dIdx}`}
-              className={`space-y-1 transition-all duration-300 ${
-                isSelectedDay ? 'opacity-100 scale-100' : 'opacity-65 hover:opacity-100'
-              }`}
+              className="sticky flex items-center justify-between px-4 py-1.5 border-b border-[color:var(--sky-border)] bg-[color:var(--sky-surface-2)]"
+              style={{ top: 'var(--sky-top-stack-h, 0px)', zIndex: 20 }}
             >
-              <div
-                className="sticky top-0 py-2 z-20 flex items-center justify-between border-b border-[color:var(--sky-border)] backdrop-blur-md"
-                style={{
-                  top: 'var(--sky-top-stack-h, 0px)',
-                  background:
-                    'linear-gradient(180deg, color-mix(in oklch, var(--sky-bg) 78%, transparent 22%), color-mix(in oklch, var(--sky-bg) 35%, transparent 65%))',
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`inline-flex items-center gap-2 text-sm sky-mono font-bold tracking-wider px-2 py-1 rounded-lg ${
-                      isSelectedDay
-                        ? 'bg-[color:rgba(124,246,255,0.16)] text-[color:var(--sky-accent)] font-extrabold border border-[color:var(--sky-border)] shadow-sm'
-                        : 'bg-[color:var(--sky-card)] text-[color:var(--sky-muted)] border border-[color:var(--sky-border)]'
-                    }`}
-                  >
-                    <span className="uppercase">{day.dayName}</span>
-                    <span>{day.shortDate}</span>
-                  </div>
-                </div>
-
-                <div className="text-[12px] text-[color:var(--sky-dim)] sky-mono font-bold">
-                  High: {convertTemp(day.tempMax, settings.tempUnit)}° / Low: {convertTemp(day.tempMin, settings.tempUnit)}°
-                </div>
-              </div>
-
-              <div className="pb-8 space-y-1">
-                {groupTimelineEvents(filteredEvents).map((item, idx) => {
-                  if (item.type === 'special' && item.events[0]) {
-                    return (
-                      <TimelineMarkerCard
-                        key={`special-${item.events[0].id}-${idx}`}
-                        event={item.events[0]}
-                        settings={settings}
-                        timeZone={timeZone}
-                        timeZoneOffsetMinutes={timeZoneOffsetMinutes}
-                      />
-                    );
-                  }
-                  if (item.type === 'merged_hourly' && item.events.length > 0) {
-                    if (item.events.length === 1) {
-                      return (
-                        <TimelineMarkerCard
-                          key={`single-${item.events[0].id}-${idx}`}
-                          event={item.events[0]}
-                          settings={settings}
-                          timeZone={timeZone}
-                          timeZoneOffsetMinutes={timeZoneOffsetMinutes}
-                        />
-                      );
-                    }
-                    return (
-                      <MergedHourlyCard key={`merged-${item.events[0].id}-${idx}`} events={item.events} settings={settings} />
-                    );
-                  }
-                  return null;
-                })}
-              </div>
+              <span className="text-[11px] sky-mono font-bold uppercase tracking-widest text-[color:var(--sky-dim)]">
+                {day.dayName} · {day.shortDate}
+              </span>
+              <span className="text-[11px] sky-mono text-[color:var(--sky-dim)]">
+                {convertTemp(day.tempMax, settings.tempUnit)}° / {convertTemp(day.tempMin, settings.tempUnit)}°
+              </span>
             </div>
-          );
-        })}
-      </div>
+
+            {items.map(renderItem)}
+          </div>
+        );
+      })}
     </div>
   );
 };

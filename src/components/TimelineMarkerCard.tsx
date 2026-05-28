@@ -202,13 +202,15 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({
   // If it's a standard hourly status element (NOT a triggered instantaneous marker)
   if (!isSpecial) {
     const condStyle = conditionCardStyle(event.iconName, event.description);
+    const showRain = event.precipProb !== undefined && event.precipProb > 10;
+    const showWind = event.windSpeed !== undefined;
     return (
       <div 
         id={`timeline-hourly-event-${event.id}`}
         className="flex items-stretch gap-4 py-1.5 pl-2 pr-2"
       >
         {/* Time Left index header */}
-        <div className="w-10 text-right font-mono text-[12px] font-bold text-[color:var(--sky-dim)] shrink-0 flex items-center justify-end">
+        <div className="w-10 text-right sky-mono text-[12px] font-bold text-[color:var(--sky-dim)] shrink-0 flex items-center justify-end">
           {event.hourLabel.replace(':00', '')}
         </div>
 
@@ -217,51 +219,46 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({
 
         {/* Content detail layout */}
         <div
-          className="flex-1 min-w-0 border px-3.5 h-[72px] rounded-2xl flex items-center justify-between shadow-sm transition-all duration-150"
+          className="flex-1 min-w-0 border px-3.5 h-[72px] rounded-none flex items-center justify-between shadow-sm transition-all duration-150"
           style={condStyle}
         >
-          {/* Left part: Icon at top, Condition text below, wrapping correctly */}
-          <div className="flex-1 flex flex-col items-start justify-center min-w-0 h-full py-1">
-            <div className="p-1 rounded text-[color:var(--sky-muted)] shrink-0">
-              <WeatherIcon name={event.iconName} size={15} />
+          {/* Left part: Icon + condition label (sky-wash style) */}
+          <div className="flex-1 flex items-center gap-2 min-w-0 h-full py-1">
+            <div className="p-1 rounded-none text-[color:var(--sky-muted)] shrink-0">
+              <WeatherIcon name={event.iconName} size={16} />
             </div>
-            <div className="flex flex-col items-start w-full">
-              <span className="text-[12px] font-bold text-[color:var(--sky-fg)] capitalize whitespace-normal break-words leading-none w-full">
+            <div className="min-w-0 flex flex-col justify-center">
+              <span className="text-[13px] font-extrabold text-[color:var(--sky-fg)] capitalize whitespace-normal break-words leading-tight w-full">
                 {event.description}
               </span>
-              {event.precipProb !== undefined && event.precipProb > 10 && (
-                <span className="text-[10px] text-[color:var(--sky-dim)] font-bold font-mono shrink-0 mt-0.5">
-                  {event.precipProb}% Rain
+              {(showRain || showWind) && (
+                <span className="text-[11px] text-[color:var(--sky-dim)] font-semibold sky-mono mt-0.5 flex items-center gap-2">
+                  {showRain && (
+                    <span className="inline-flex items-center gap-1">
+                      <WeatherIcon name="precip" size={12} className="text-[color:var(--sky-accent)]" />
+                      <span>{event.precipProb}%</span>
+                    </span>
+                  )}
+                  {showWind && (
+                    <span className="inline-flex items-center gap-1">
+                      <WindDirectionArrow
+                        deg={(event.windSpeed ?? 0) <= 0 ? 0 : (event.windDeg ?? 0)}
+                        size={11}
+                        title={`Wind direction: ${event.windDeg}°`}
+                      />
+                      <span>
+                        {convertWindSpeed(event.windSpeed, settings.windSpeedUnit)} {settings.windSpeedUnit}
+                      </span>
+                    </span>
+                  )}
                 </span>
               )}
             </div>
           </div>
 
-          {/* Left divider line simulating '|' */}
-          <div className="h-5 w-[1px] bg-[color:var(--sky-border)] mx-2 shrink-0" />
-
-          {/* Middle part: Wind */}
-          <div className="w-20 shrink-0 flex items-center justify-end gap-1.5 font-mono text-[11px] text-[color:var(--sky-dim)] h-full">
-            {event.windSpeed !== undefined && (
-              <>
-                <WindDirectionArrow
-                  deg={(event.windSpeed ?? 0) <= 0 ? 0 : (event.windDeg ?? 0)}
-                  size={10}
-                  title={`Wind direction: ${event.windDeg}°`}
-                />
-                <span className="font-semibold text-[color:var(--sky-muted)]">
-                  {convertWindSpeed(event.windSpeed, settings.windSpeedUnit)} {settings.windSpeedUnit}
-                </span>
-              </>
-            )}
-          </div>
-
-          {/* Right divider line simulating '|' */}
-          <div className="h-5 w-[1px] bg-[color:var(--sky-border)] mx-2 shrink-0" />
-
-          {/* Right part: Temperature */}
-          <div className="w-12 shrink-0 text-right h-full flex items-center justify-end">
-            <span className="text-base font-extrabold text-[color:var(--sky-fg)]">
+          {/* Temperature (prominent like reference) */}
+          <div className="shrink-0 text-right h-full flex items-center justify-end pl-3">
+            <span className="text-[28px] leading-none font-black text-[color:var(--sky-fg)] tabular-nums sky-title">
               {convertTemp(event.temp ?? 0, settings.tempUnit)}°
             </span>
           </div>

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { DailyForecast, WeatherTimelineEvent } from '../../types';
+import type { DailyForecast, WeatherData, WeatherTimelineEvent } from '../../types';
 import type { StandardDailyPoint, StandardHourlyPoint } from './sharedTypes';
 import {
   formatDateLongAtLocation,
@@ -18,7 +18,8 @@ export function assembleTimelineAndForecasts(
   hourlyPoints: StandardHourlyPoint[],
   dailyPoints: StandardDailyPoint[],
   timeZone?: string,
-  timeZoneOffsetMinutes?: number
+  timeZoneOffsetMinutes?: number,
+  currentConditions?: WeatherData['current'],
 ): DailyForecast[] {
   const tz = { timeZone, offsetMinutes: timeZoneOffsetMinutes };
   const dailyForecasts: DailyForecast[] = [];
@@ -151,10 +152,14 @@ export function assembleTimelineAndForecasts(
         time: liveNow,
         hourLabel: formatTime24AtLocation(liveNow, tz),
         type: 'now',
-        title: 'Current Conditions',
-        description: 'You are right here',
-        iconName: 'locate',
+        title: 'Now',
+        description: currentConditions?.description ?? 'Current conditions',
+        iconName: currentConditions?.iconName ?? 'locate',
         temp: Math.round(currentTemp),
+        windSpeed: currentConditions?.windSpeed,
+        windDeg: currentConditions?.windDeg,
+        precipProb: currentConditions?.precipProb,
+        humidity: currentConditions?.humidity,
         colorTheme: 'blue',
         isSpecial: true,
       });

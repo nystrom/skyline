@@ -100,3 +100,25 @@ export function conditionCardStyle(iconName: string | undefined | null, descript
   };
 }
 
+function rowRgb(kind: ConditionTintKind, desc: string, precipProb?: number): Rgb {
+  if (kind === 'rain') {
+    const prob = precipProb ?? 50;
+    if (desc.includes('heavy') || prob >= 80) return rgb(80, 112, 200);
+    if (desc.includes('light') || desc.includes('drizzle') || prob < 40) return rgb(160, 200, 255);
+    return rgb(110, 155, 230);
+  }
+  return CONDITION_PALETTE[kind].rgb;
+}
+
+export function conditionRowStyle(
+  iconName: string | undefined | null,
+  description?: string | null,
+  precipProb?: number,
+): CSSProperties {
+  const kind = conditionTintKind(iconName, description);
+  const { r, g, b } = rowRgb(kind, normalizeText(description), precipProb);
+  return {
+    background: `color-mix(in srgb, var(--sky-surface) calc(100% - var(--sky-row-wash)), rgb(${r} ${g} ${b}) var(--sky-row-wash))`,
+  };
+}
+
