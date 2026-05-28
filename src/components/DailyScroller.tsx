@@ -53,14 +53,27 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
 
   const scrollToTimelineDay = (idx: number) => {
     const scrollContainer = document.getElementById('weather-timeline-container');
-    const element = document.getElementById(`timeline-day-anchor-${idx}`);
-    if (!scrollContainer || !element) return;
+    const dayAnchor = document.getElementById(`timeline-day-anchor-${idx}`);
+    if (!scrollContainer || !dayAnchor) return;
 
     const containerTop = scrollContainer.getBoundingClientRect().top;
-    const elementTop = element.getBoundingClientRect().top;
     const pinned = readTopStackHeight(scrollContainer);
-    const targetTop = elementTop - containerTop + scrollContainer.scrollTop - pinned;
-    fastScrollTo(scrollContainer, targetTop, 450);
+    const visibleHeight = scrollContainer.clientHeight - pinned;
+
+    // Minimum scroll: put the day anchor flush at the top of the visible area.
+    const dayAnchorTop = dayAnchor.getBoundingClientRect().top;
+    const targetDayStart = dayAnchorTop - containerTop + scrollContainer.scrollTop - pinned;
+
+    // Preferred scroll: sunrise 20% down from the top of the visible area.
+    const sunriseEl = document.getElementById(`timeline-instant-event-${idx}-sunrise`);
+    if (sunriseEl) {
+      const sunriseTop = sunriseEl.getBoundingClientRect().top;
+      const targetSunrise = sunriseTop - containerTop + scrollContainer.scrollTop - pinned - visibleHeight * 0.2;
+      // If sunrise-20% would expose the previous day, fall back to day start.
+      fastScrollTo(scrollContainer, Math.max(targetDayStart, targetSunrise), 450);
+    } else {
+      fastScrollTo(scrollContainer, Math.max(0, targetDayStart), 450);
+    }
   };
 
   const handleDayClick = (idx: number) => {
