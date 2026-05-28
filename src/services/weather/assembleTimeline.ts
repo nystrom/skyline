@@ -120,30 +120,6 @@ export function assembleTimelineAndForecasts(
       });
     }
 
-    for (let i = 1; i < dayHours.length; i++) {
-      if (dayHours[i].interpolated || dayHours[i - 1].interpolated) continue;
-      const degDelta = Math.abs(dayHours[i].windDeg - dayHours[i - 1].windDeg);
-      const toSpeed = Number(coalesceNumber(dayHours[i].windSpeed).toFixed(1));
-      const fromSpeed = Number(coalesceNumber(dayHours[i - 1].windSpeed).toFixed(1));
-      if (degDelta > 45 && degDelta < 315 && toSpeed >= 2.5 && fromSpeed >= 2.5) {
-        timelineEvents.push({
-          id: `event-${dIdx}-windshift`,
-          time: dayHours[i].time,
-          hourLabel: formatTime24AtLocation(dayHours[i].time, tz),
-          type: 'wind_shift',
-          title: 'Breeze Vector Shift',
-          description: 'Wind shifts direction',
-          iconName: 'navigation',
-          windSpeed: toSpeed,
-          windDeg: coalesceNumber(dayHours[i].windDeg),
-          windFromSpeed: fromSpeed,
-          windFromDeg: coalesceNumber(dayHours[i - 1].windDeg),
-          colorTheme: 'emerald',
-          isSpecial: true,
-        });
-        break;
-      }
-    }
 
     if (dIdx === 0) {
       const liveNow = new Date();
