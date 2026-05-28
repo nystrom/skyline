@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Search, X, Trash2, RefreshCw } from 'lucide-react';
+import { MapPin, Search, X, Trash2, RefreshCw, Crosshair } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { UserSettings, SavedLocation } from '../types';
 import { searchLocations, reverseGeocode, geocodeLocation } from '../utils/weatherFetcher';
@@ -254,6 +254,15 @@ export const LocationsScreen: React.FC<LocationsScreenProps> = ({
           )}
         </div>
         <button
+          type="button"
+          onClick={handleUseGeolocation}
+          className="p-2.5 bg-[color:var(--sky-card)] hover:bg-[color:var(--sky-card-2)] border border-[color:var(--sky-border)] text-[color:var(--sky-accent)] rounded-xl transition cursor-pointer shrink-0"
+          title="Use my current location"
+          aria-label="Detect my GPS location"
+        >
+          <Crosshair size={17} />
+        </button>
+        <button
           type="submit"
           className="px-4 py-2 bg-[color:var(--sky-accent-2)] hover:brightness-110 text-black rounded-xl text-sm font-bold transition duration-150 cursor-pointer"
         >
@@ -360,17 +369,6 @@ export const LocationsScreen: React.FC<LocationsScreenProps> = ({
         </div>
       </div>
 
-      {/* GPS Detection Footer */}
-      <div className="pt-3 border-t border-[color:var(--sky-border)] shrink-0 mt-3">
-        <button
-          type="button"
-          onClick={handleUseGeolocation}
-          className="w-full py-2.5 bg-[color:var(--sky-card)] hover:bg-[color:var(--sky-card-2)] border border-[color:var(--sky-border)] text-[color:var(--sky-fg)] rounded-2xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
-        >
-          <MapPin size={14} className="text-[color:var(--sky-accent)] animate-bounce" />
-          Detect My GPS Coordinates
-        </button>
-      </div>
     </motion.div>
   );
 };
