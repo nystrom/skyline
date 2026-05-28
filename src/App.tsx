@@ -211,8 +211,8 @@ export default function App() {
       const containerTop = scrollContainer.getBoundingClientRect().top;
       const elementTop = element.getBoundingClientRect().top;
       const pinned = readTopStackHeight(scrollContainer);
-      const pad = 8;
-      const targetTop = elementTop - containerTop + scrollContainer.scrollTop - pinned - pad;
+      const visibleHeight = scrollContainer.clientHeight - pinned;
+      const targetTop = elementTop - containerTop + scrollContainer.scrollTop - pinned - visibleHeight * 0.2;
 
       scrollContainer.scrollTo({ top: Math.max(0, targetTop), behavior: 'auto' });
     }, 100);
