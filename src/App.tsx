@@ -11,6 +11,7 @@ import { isApiKeyValid } from './services/validation';
 import { geocodedToSaved, locationId } from './utils/savedLocation';
 import { WeatherHeader } from './components/WeatherHeader';
 import { DailyScroller } from './components/DailyScroller';
+import { formatTimeAtLocation } from './utils/unitConverter';
 import { WeatherTimeline } from './components/WeatherTimeline';
 import { WeatherIcon } from './components/WeatherIcon';
 import { LocationsScreen } from './components/LocationsScreen';
@@ -444,7 +445,13 @@ export default function App() {
                           Issued by: {w.sender || 'Unknown Agency'}
                         </p>
                         <p className="text-[10px] sky-mono text-[color:var(--sky-dim)] leading-tight">
-                          {w.starts.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {w.ends.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          {formatTimeAtLocation(w.starts, settings.clockFormat, {
+                            timeZone: displayData?.timeZone,
+                            offsetMinutes: displayData?.timeZoneOffsetMinutes
+                          })} - {formatTimeAtLocation(w.ends, settings.clockFormat, {
+                            timeZone: displayData?.timeZone,
+                            offsetMinutes: displayData?.timeZoneOffsetMinutes
+                          })}
                         </p>
                         <div className="text-[12px] font-medium leading-relaxed text-[color:var(--sky-fg)] whitespace-pre-wrap pt-2 border-t border-[color:var(--sky-border)]/50">
                           {w.description}
