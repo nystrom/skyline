@@ -131,21 +131,23 @@ function instantTheme(type: string) {
       };
     case 'moonrise':
       return {
-        dot: 'bg-purple-500',
-        ring: 'ring-purple-200 dark:ring-purple-900/60',
-        connector: 'bg-purple-200 dark:bg-purple-800/60',
-        time: 'text-purple-500 dark:text-purple-400',
-        pill: 'bg-purple-50/90 dark:bg-purple-950/60 border-purple-200 dark:border-purple-800 text-purple-800 dark:text-purple-200',
-        icon: 'text-purple-500 dark:text-purple-400',
+        dot: 'bg-purple-700',
+        ring: 'ring-purple-300 dark:ring-purple-900/60',
+        connector: 'bg-purple-300 dark:bg-purple-900/60',
+        time: 'text-purple-700 dark:text-purple-400',
+        pill: 'border-purple-500/60 dark:border-purple-700/60 text-white',
+        pillStyle: { background: 'linear-gradient(to right, #3b0764, #7c3aed)' } as React.CSSProperties,
+        icon: 'text-white/90',
       };
     case 'moonset':
       return {
-        dot: 'bg-slate-500',
-        ring: 'ring-slate-200 dark:ring-slate-700/60',
-        connector: 'bg-slate-200 dark:bg-slate-700/60',
-        time: 'text-slate-500 dark:text-slate-400',
-        pill: 'bg-slate-50/90 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300',
-        icon: 'text-slate-500 dark:text-slate-400',
+        dot: 'bg-violet-500',
+        ring: 'ring-violet-300 dark:ring-violet-900/60',
+        connector: 'bg-violet-300 dark:bg-violet-900/60',
+        time: 'text-violet-600 dark:text-violet-400',
+        pill: 'border-violet-400/60 dark:border-violet-700/60 text-white',
+        pillStyle: { background: 'linear-gradient(to right, #7c3aed, #3b0764)' } as React.CSSProperties,
+        icon: 'text-white/90',
       };
     case 'peak_temp':
       return {
