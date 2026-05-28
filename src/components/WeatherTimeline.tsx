@@ -111,21 +111,21 @@ function instantTheme(type: string) {
       };
     case 'sunrise':
       return {
-        dot: 'bg-amber-400',
-        ring: 'ring-amber-200 dark:ring-amber-900/60',
-        connector: 'bg-amber-200 dark:bg-amber-800/60',
-        time: 'text-amber-500 dark:text-amber-400',
-        pill: 'bg-amber-50/90 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200',
-        icon: 'text-amber-500 dark:text-amber-400',
+        dot: 'bg-orange-400',
+        ring: 'ring-rose-200 dark:ring-rose-900/60',
+        connector: 'bg-orange-200 dark:bg-orange-800/60',
+        time: 'text-orange-500 dark:text-orange-400',
+        pill: 'bg-rose-50/90 dark:bg-rose-950/60 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300',
+        icon: 'text-orange-500 dark:text-orange-400',
       };
     case 'sunset':
       return {
-        dot: 'bg-indigo-500',
-        ring: 'ring-indigo-200 dark:ring-indigo-900/60',
-        connector: 'bg-indigo-200 dark:bg-indigo-800/60',
-        time: 'text-indigo-500 dark:text-indigo-400',
-        pill: 'bg-indigo-50/90 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-800 text-indigo-800 dark:text-indigo-200',
-        icon: 'text-indigo-500 dark:text-indigo-400',
+        dot: 'bg-fuchsia-600',
+        ring: 'ring-fuchsia-200 dark:ring-fuchsia-900/60',
+        connector: 'bg-fuchsia-200 dark:bg-fuchsia-900/60',
+        time: 'text-fuchsia-600 dark:text-fuchsia-400',
+        pill: 'bg-fuchsia-50/90 dark:bg-fuchsia-950/60 border-fuchsia-200 dark:border-fuchsia-900 text-fuchsia-800 dark:text-fuchsia-300',
+        icon: 'text-fuchsia-600 dark:text-fuchsia-400',
       };
     case 'moonrise':
       return {
