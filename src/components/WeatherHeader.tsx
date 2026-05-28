@@ -207,22 +207,10 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
     };
   };
 
-  const sunChip = (): { label: string; value: string } => {
-    const now = new Date();
-    const sunset = current.sunsetTime;
-    const sunrise = current.sunriseTime;
-
-    if (sunset && sunset.getTime() > now.getTime()) {
-      return { label: 'SUNSET', value: formatTimeAtLocation(sunset, '24h', tz) };
-    }
-    if (sunrise && sunrise.getTime() > now.getTime()) {
-      return { label: 'SUNRISE', value: formatTimeAtLocation(sunrise, '24h', tz) };
-    }
-    if (sunset) {
-      return { label: 'SUNSET', value: formatTimeAtLocation(sunset, '24h', tz) };
-    }
-    return { label: 'HUMIDITY', value: `${current.humidity}%` };
-  };
+  const humidityChip = (): { label: string; value: string } => ({
+    label: 'HUMIDITY',
+    value: `${current.humidity}%`,
+  });
 
   const buildDescription = (): string => {
     const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -232,10 +220,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
     return `${desc}. ${cap(upcoming)}.`;
   };
 
-  const rain = rainChip();
-  const wind = windChip();
-  const sun = sunChip();
-  const chips = [rain, wind, sun];
+  const chips = [rainChip(), humidityChip(), windChip()];
 
   return (
     <div
