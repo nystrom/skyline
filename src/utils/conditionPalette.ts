@@ -34,21 +34,32 @@ export function weatherKindToTintKind(kind: WeatherKind): ConditionTintKind {
   switch (kind) {
     case WeatherKind.Clear:
     case WeatherKind.PartlyCloudy:
+    case WeatherKind.Hot:
       return 'clear';
     case WeatherKind.Cloudy:
       return 'cloud';
     case WeatherKind.Fog:
+    case WeatherKind.Hazy:
+    case WeatherKind.Mist:
+    case WeatherKind.Smoke:
       return 'fog';
     case WeatherKind.Sand:
       return 'sand';
     case WeatherKind.Thunderstorm:
     case WeatherKind.ThunderstormHail:
+    case WeatherKind.Hurricane:
+    case WeatherKind.Tornado:
       return 'storm';
     case WeatherKind.SnowLight:
     case WeatherKind.SnowModerate:
     case WeatherKind.SnowHeavy:
     case WeatherKind.SnowShowers:
     case WeatherKind.FreezingRain:
+    case WeatherKind.Cold:
+    case WeatherKind.Sleet:
+    case WeatherKind.Ice:
+    case WeatherKind.Blizzard:
+    case WeatherKind.IcePellets:
       return 'snow';
     case WeatherKind.Drizzle:
     case WeatherKind.RainLight:
@@ -56,6 +67,9 @@ export function weatherKindToTintKind(kind: WeatherKind): ConditionTintKind {
     case WeatherKind.RainHeavy:
     case WeatherKind.Showers:
       return 'rain';
+    case WeatherKind.Unknown:
+    case WeatherKind.Wind:
+      return 'other';
   }
 }
 

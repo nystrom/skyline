@@ -30,7 +30,10 @@ import {
   WifiOff,
   Settings,
   Check,
-  AlertCircle
+  AlertCircle,
+  Haze,
+  CloudFog,
+  Tornado
 } from 'lucide-react';
 
 interface WeatherIconProps {
@@ -107,6 +110,17 @@ export const WeatherIcon: React.FC<WeatherIconProps> = ({ name, className = '', 
       return <Settings className={className} size={size} />;
     case 'check':
       return <Check className={className} size={size} />;
+    case 'haze':
+    case 'hazy':
+      return <Haze className={className} size={size} />;
+    case 'mist':
+      return <CloudFog className={className} size={size} />;
+    case 'unknown':
+      return <AlertCircle className={className} size={size} />;
+    case 'tornado':
+      return <Tornado className={className} size={size} />;
+    case 'hurricane':
+      return <Wind className={className} size={size} />;
     default:
       return <Cloud className={className} size={size} />;
   }
