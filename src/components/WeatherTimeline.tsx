@@ -543,7 +543,7 @@ export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
           <div
             key={day.shortDate}
             id={`timeline-day-anchor-${dIdx}`}
-            className={`transition-opacity duration-300 ${isSelectedDay ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
+            className="relative"
           >
             <div
               className="sticky flex items-center justify-between px-4 py-1.5 border-b border-[color:var(--sky-border)] bg-[color:var(--sky-surface-2)]"
@@ -557,7 +557,9 @@ export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
               </span>
             </div>
 
-            {items.map(renderItem)}
+            <div className={`transition-opacity duration-300 ${isSelectedDay ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}>
+              {items.map(renderItem)}
+            </div>
           </div>
         );
       })}
