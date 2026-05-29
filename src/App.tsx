@@ -218,7 +218,13 @@ export default function App() {
   const readTopStackHeight = (scrollContainer: HTMLElement): number => {
     const raw = getComputedStyle(scrollContainer).getPropertyValue('--sky-top-stack-h').trim();
     const n = Number.parseFloat(raw.replace('px', ''));
-    return Number.isFinite(n) ? n : 0;
+    if (Number.isFinite(n) && n > 0) return n;
+
+    const topStack = document.getElementById('weather-top-stack');
+    if (topStack) {
+      return Math.round(topStack.getBoundingClientRect().height);
+    }
+    return 0;
   };
 
   const handleSelectNow = () => {
@@ -341,7 +347,7 @@ export default function App() {
     const ro = new ResizeObserver(() => apply());
     ro.observe(topStack);
     return () => ro.disconnect();
-  }, [displayData != null]);
+  }, [displayData?.lat, displayData?.lon]);
 
   return (
     <div
