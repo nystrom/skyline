@@ -19,6 +19,8 @@ function parseNWSWindDeg(dir: string): number {
 }
 
 import { nwsUrlToKind, weatherKindToIcon } from '../weatherKind';
+import { getMoonriseMoonset } from '../moonUtils';
+import { formatDayKeyAtLocation } from '../../../utils/unitConverter';
 
 function mapNWSIconToLucide(iconUrl: string, isDay = true): string {
   return weatherKindToIcon(nwsUrlToKind(iconUrl), isDay);
@@ -41,7 +43,7 @@ async function fetchNWSRawBundle(location: WeatherLocationInput, signal?: AbortS
   const timeZone = (pointsData?.properties?.timeZone as string | undefined) ?? undefined;
   const forecastHourlyUrl = `${pointsData.properties.forecastHourly}?units=si`;
   const forecastDailyUrl = `${pointsData.properties.forecast}?units=si`;
-  const astroUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=sunrise,sunset,moonrise,moonset,moon_phase&hourly=cloud_cover&current=cloud_cover&timezone=auto&timeformat=unixtime`;
+  const astroUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=sunrise,sunset&hourly=cloud_cover&current=cloud_cover&timezone=auto&timeformat=unixtime`;
 
   const [hourlyRes, dailyRes, astroRes] = await Promise.all([
     fetchWithRateLimit('nws', forecastHourlyUrl, { headers, signal }),
@@ -84,10 +86,11 @@ async function fetchNWSRawBundle(location: WeatherLocationInput, signal?: AbortS
     const p = dailyPeriods[i];
     if (!p.isDaytime) continue;
     const d = new Date(p.startTime as string);
-    const dayKey = d.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const locOpts = { timeZone };
+    const dayKey = formatDayKeyAtLocation(d, locOpts);
     const astroIdx = astroDaily.time.findIndex((t: number) => {
       const astroDate = new Date(t * 1000);
-      return astroDate.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) === dayKey;
+      return formatDayKeyAtLocation(astroDate, locOpts) === dayKey;
     });
     const next = dailyPeriods[i + 1];
     const minTemp = next && !next.isDaytime ? (next.temperature as number) : (p.temperature as number);
@@ -100,14 +103,7 @@ async function fetchNWSRawBundle(location: WeatherLocationInput, signal?: AbortS
       astroIdx >= 0 && astroDaily.sunset
         ? new Date(astroDaily.sunset[astroIdx] * 1000)
         : new Date(d.getTime() + 18 * 3600 * 1000);
-    const moonriseVal =
-      astroIdx >= 0 && astroDaily.moonrise?.[astroIdx]
-        ? new Date(astroDaily.moonrise[astroIdx] * 1000)
-        : undefined;
-    const moonsetVal =
-      astroIdx >= 0 && astroDaily.moonset?.[astroIdx]
-        ? new Date(astroDaily.moonset[astroIdx] * 1000)
-        : undefined;
+    const { moonriseTime: moonriseVal, moonsetTime: moonsetVal } = getMoonriseMoonset(d, lat, lon, i);
 
     dailyPoints.push({
       date: d,
@@ -128,13 +124,15 @@ async function fetchNWSRawBundle(location: WeatherLocationInput, signal?: AbortS
   }
 
   const currentPeriod = hourlyPeriods[0];
-  const todayStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  const locOpts = { timeZone };
+  const todayStr = formatDayKeyAtLocation(new Date(), locOpts);
   const firstAstroIdx = astroDaily.time.findIndex((t: number) => {
     const astroDate = new Date(t * 1000);
-    return astroDate.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) === todayStr;
+    return formatDayKeyAtLocation(astroDate, locOpts) === todayStr;
   });
   const curPop = currentPeriod.probabilityOfPrecipitation as { value?: number } | undefined;
   const curHumidity = currentPeriod.relativeHumidity as { value?: number } | undefined;
+  const { moonriseTime: curMoonrise, moonsetTime: curMoonset } = getMoonriseMoonset(new Date(), lat, lon, 0);
 
   return {
     rawHourly,
@@ -158,14 +156,8 @@ async function fetchNWSRawBundle(location: WeatherLocationInput, signal?: AbortS
         firstAstroIdx >= 0 ? new Date(astroDaily.sunrise[firstAstroIdx] * 1000) : new Date(Date.now() - 15000),
       sunsetTime:
         firstAstroIdx >= 0 ? new Date(astroDaily.sunset[firstAstroIdx] * 1000) : new Date(Date.now() + 15000),
-      moonriseTime:
-        firstAstroIdx >= 0 && astroDaily.moonrise?.[firstAstroIdx]
-          ? new Date(astroDaily.moonrise[firstAstroIdx] * 1000)
-          : undefined,
-      moonsetTime:
-        firstAstroIdx >= 0 && astroDaily.moonset?.[firstAstroIdx]
-          ? new Date(astroDaily.moonset[firstAstroIdx] * 1000)
-          : undefined,
+      moonriseTime: curMoonrise,
+      moonsetTime: curMoonset,
     },
   };
 }

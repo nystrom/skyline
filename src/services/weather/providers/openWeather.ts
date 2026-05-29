@@ -11,6 +11,7 @@ import { buildForecast } from '../forecastNormalize';
 import { getMoonriseMoonset } from '../moonUtils';
 import type { ProviderFetchContext, ProviderRawBundle, RawHourlySlot, StandardDailyPoint, WeatherLocationInput } from '../sharedTypes';
 import type { WeatherProviderAdapter } from '../providerTypes';
+import { formatDayKeyAtLocation } from '../../../utils/unitConverter';
 
 import { owIconToKind, owIdToKind, owWeatherArrayToKind, weatherKindToIcon } from '../weatherKind';
 
@@ -83,9 +84,10 @@ async function fetchOpenWeatherRawBundle(
   });
 
   const groupedDays: Record<string, typeof list> = {};
+  const locOpts = { offsetMinutes: Math.round(timezoneOffsetSec / 60) };
   list.forEach((item) => {
-    const localDate = new Date(((item.dt as number) + timezoneOffsetSec) * 1000);
-    const dayKey = localDate.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const itemDate = new Date((item.dt as number) * 1000);
+    const dayKey = formatDayKeyAtLocation(itemDate, locOpts);
     if (!groupedDays[dayKey]) groupedDays[dayKey] = [];
     groupedDays[dayKey].push(item);
   });
@@ -124,7 +126,7 @@ async function fetchOpenWeatherRawBundle(
     daySunrise.setHours(sunriseTime.getHours(), sunriseTime.getMinutes(), sunriseTime.getSeconds());
     const daySunset = new Date(dateObj);
     daySunset.setHours(sunsetTime.getHours(), sunsetTime.getMinutes(), sunsetTime.getSeconds());
-    const { moonriseTime, moonsetTime } = getMoonriseMoonset(dateObj, d);
+    const { moonriseTime, moonsetTime } = getMoonriseMoonset(dateObj, lat, lon, d);
     const repWeather = (repItem.weather as Array<{ id?: number; description?: string; main?: string; icon?: string }>) || [];
     const repIcon = repWeather[0]?.icon || '01d';
 
@@ -160,7 +162,7 @@ async function fetchOpenWeatherRawBundle(
   const curSnow = currentData.snow as Record<string, number> | undefined;
   const currentSunrise = new Date((sys?.sunrise || Date.now() / 1000 - 15000) * 1000);
   const currentSunset = new Date((sys?.sunset || Date.now() / 1000 + 15000) * 1000);
-  const { moonriseTime: curMoonrise, moonsetTime: curMoonset } = getMoonriseMoonset(new Date(), 0);
+  const { moonriseTime: curMoonrise, moonsetTime: curMoonset } = getMoonriseMoonset(new Date(), lat, lon, 0);
   const currentPrecip = (curRain?.['1h'] || curRain?.['3h'] || 0) + (curSnow?.['1h'] || curSnow?.['3h'] || 0);
 
   const curIcon = curWeather[0]?.icon || '01d';

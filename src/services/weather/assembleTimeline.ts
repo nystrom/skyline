@@ -7,6 +7,7 @@ import type { DailyForecast, WeatherData, WeatherTimelineEvent } from '../../typ
 import type { StandardDailyPoint, StandardHourlyPoint } from './sharedTypes';
 import {
   formatDateLongAtLocation,
+  formatDayKeyAtLocation,
   formatShortDateAtLocation,
   formatTime24AtLocation,
   formatWeekdayAtLocation,
@@ -22,19 +23,17 @@ export function assembleTimelineAndForecasts(
   currentConditions?: WeatherData['current'],
 ): DailyForecast[] {
   const tz = { timeZone, offsetMinutes: timeZoneOffsetMinutes };
-  const dayKeyOpts: Intl.DateTimeFormatOptions = { year: 'numeric', month: '2-digit', day: '2-digit' };
-  if (timeZone) dayKeyOpts.timeZone = timeZone;
 
   const dailyForecasts: DailyForecast[] = [];
   const groupedHourly: Record<string, StandardHourlyPoint[]> = {};
   hourlyPoints.forEach((pt) => {
-    const dayKey = pt.time.toLocaleDateString('en-US', dayKeyOpts);
+    const dayKey = formatDayKeyAtLocation(pt.time, tz);
     if (!groupedHourly[dayKey]) groupedHourly[dayKey] = [];
     groupedHourly[dayKey].push(pt);
   });
 
   dailyPoints.forEach((day, dIdx) => {
-    const dayKey = day.date.toLocaleDateString('en-US', dayKeyOpts);
+    const dayKey = formatDayKeyAtLocation(day.date, tz);
     const dayHours = groupedHourly[dayKey] || [];
     const timelineEvents: WeatherTimelineEvent[] = [];
 

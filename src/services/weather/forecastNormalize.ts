@@ -11,12 +11,11 @@ import {
 } from './forecastConstants';
 import { coalesceNumber } from './numbers';
 import {
-  dayKey,
   hourKey,
   interpolateAngleDeg,
   interpolateLinear,
-  startOfLocalDay,
 } from './dateUtils';
+import { formatDayKeyAtLocation } from '../../utils/unitConverter';
 import type {
   ForecastBuildInput,
   ForecastBuildResult,
@@ -64,19 +63,24 @@ export function mergeRawHourlyLayers(layers: RawHourlySlot[][]): RawHourlySlot[]
   });
 }
 
-export function mergeDailyLayers(layers: StandardDailyPoint[][]): StandardDailyPoint[] {
+export function mergeDailyLayers(
+  layers: StandardDailyPoint[][],
+  timeZone?: string,
+  timeZoneOffsetMinutes?: number
+): StandardDailyPoint[] {
   if (layers.length === 0) return [];
   const byDay = new Map<string, StandardDailyPoint>();
+  const tzOpts = { timeZone, offsetMinutes: timeZoneOffsetMinutes };
 
   for (let i = layers.length - 1; i >= 0; i--) {
     for (const day of layers[i]) {
-      const key = dayKey(day.date);
+      const key = formatDayKeyAtLocation(day.date, tzOpts);
       if (!byDay.has(key)) byDay.set(key, day);
     }
   }
 
   for (const day of layers[0]) {
-    byDay.set(dayKey(day.date), day);
+    byDay.set(formatDayKeyAtLocation(day.date, tzOpts), day);
   }
 
   return [...byDay.values()]
@@ -103,9 +107,15 @@ function rawSlotToStandard(slot: RawHourlySlot, interpolated: boolean): Standard
   };
 }
 
-function findDailyForTime(daily: StandardDailyPoint[], timeMs: number): StandardDailyPoint | undefined {
-  const key = dayKey(new Date(timeMs));
-  return daily.find((d) => dayKey(d.date) === key);
+function findDailyForTime(
+  daily: StandardDailyPoint[],
+  timeMs: number,
+  timeZone?: string,
+  timeZoneOffsetMinutes?: number
+): StandardDailyPoint | undefined {
+  const tzOpts = { timeZone, offsetMinutes: timeZoneOffsetMinutes };
+  const key = formatDayKeyAtLocation(new Date(timeMs), tzOpts);
+  return daily.find((d) => formatDayKeyAtLocation(d.date, tzOpts) === key);
 }
 
 function findNearestObserved(
@@ -129,7 +139,9 @@ function findNearestObserved(
 export function interpolateHourlyGrid(
   raw: RawHourlySlot[],
   daily: StandardDailyPoint[],
-  numDays: number
+  numDays: number,
+  timeZone?: string,
+  timeZoneOffsetMinutes?: number
 ): StandardHourlyPoint[] {
   const anchorMap = new Map<number, RawHourlySlot>();
   raw.forEach((slot) => {
@@ -143,13 +155,7 @@ export function interpolateHourlyGrid(
     return raw.filter(isObservedSlot).map((s) => rawSlotToStandard(s, false));
   }
 
-  const now = new Date();
-  const todayStart = startOfLocalDay(now);
-  // daily[0].date is midnight in the location's timezone from the API. If forecast data
-  // is stale (day 0 = yesterday), start the grid there so day 0 gets hourly cards.
-  const gridStart = daily.length > 0 && daily[0].date.getTime() < todayStart.getTime()
-    ? daily[0].date
-    : todayStart;
+  const gridStart = daily[0].date;
 
   const lastDay = daily[Math.min(numDays, daily.length) - 1];
   const gridEnd = new Date(lastDay.date);
@@ -171,7 +177,7 @@ export function interpolateHourlyGrid(
     const skySource =
       findNearestObserved(anchorMap, sortedKeys, t, 'before') ??
       findNearestObserved(anchorMap, sortedKeys, t, 'after');
-    const dailyForDay = findDailyForTime(daily, t);
+    const dailyForDay = findDailyForTime(daily, t, timeZone, timeZoneOffsetMinutes);
 
     let temp: number;
     if (prev && next && prev.temp != null && next.temp != null) {
@@ -230,13 +236,18 @@ export function interpolateHourlyGrid(
   return result;
 }
 
-export function countRealForecastDays(hourly: StandardHourlyPoint[]): number {
-  const todayKey = dayKey(new Date());
+export function countRealForecastDays(
+  hourly: StandardHourlyPoint[],
+  timeZone?: string,
+  timeZoneOffsetMinutes?: number
+): number {
+  const tzOpts = { timeZone, offsetMinutes: timeZoneOffsetMinutes };
+  const todayKey = formatDayKeyAtLocation(new Date(), tzOpts);
   const byDay = new Map<string, number>();
 
   hourly.forEach((h) => {
     if (h.interpolated) return;
-    const key = dayKey(h.time);
+    const key = formatDayKeyAtLocation(h.time, tzOpts);
     if (key < todayKey) return;
     byDay.set(key, (byDay.get(key) ?? 0) + 1);
   });
@@ -263,26 +274,35 @@ export function computePeakTempTime(dayHours: StandardHourlyPoint[]): Date | nul
 function trimToDays(
   daily: StandardDailyPoint[],
   hourly: StandardHourlyPoint[],
-  numDays: number
+  numDays: number,
+  timeZone?: string,
+  timeZoneOffsetMinutes?: number
 ): { daily: StandardDailyPoint[]; hourly: StandardHourlyPoint[] } {
   const trimmedDaily = daily.slice(0, numDays);
   if (trimmedDaily.length === 0) return { daily: [], hourly: [] };
 
-  const firstKey = dayKey(trimmedDaily[0].date);
-  const lastKey = dayKey(trimmedDaily[trimmedDaily.length - 1].date);
+  const tzOpts = { timeZone, offsetMinutes: timeZoneOffsetMinutes };
+  const firstKey = formatDayKeyAtLocation(trimmedDaily[0].date, tzOpts);
+  const lastKey = formatDayKeyAtLocation(trimmedDaily[trimmedDaily.length - 1].date, tzOpts);
 
   const trimmedHourly = hourly.filter((h) => {
-    const key = dayKey(h.time);
+    const key = formatDayKeyAtLocation(h.time, tzOpts);
     return key >= firstKey && key <= lastKey;
   });
 
   return { daily: trimmedDaily, hourly: trimmedHourly };
 }
 
-function enrichDailyFromHourly(daily: StandardDailyPoint[], hourly: StandardHourlyPoint[]): StandardDailyPoint[] {
+function enrichDailyFromHourly(
+  daily: StandardDailyPoint[],
+  hourly: StandardHourlyPoint[],
+  timeZone?: string,
+  timeZoneOffsetMinutes?: number
+): StandardDailyPoint[] {
+  const tzOpts = { timeZone, offsetMinutes: timeZoneOffsetMinutes };
   return daily.map((day) => {
-    const key = dayKey(day.date);
-    const dayHours = hourly.filter((h) => dayKey(h.time) === key);
+    const key = formatDayKeyAtLocation(day.date, tzOpts);
+    const dayHours = hourly.filter((h) => formatDayKeyAtLocation(h.time, tzOpts) === key);
     const precipAccum = dayHours.reduce((sum, h) => sum + h.precipAccum, 0);
     const peakTempTime = computePeakTempTime(dayHours);
 
@@ -309,12 +329,18 @@ export function buildForecast(input: ForecastBuildInput): ForecastBuildResult {
   const maxDailyDays = input.dailyPoints.length;
   const displayDays = Math.min(targetDays, maxDailyDays);
 
-  let hourly = interpolateHourlyGrid(input.rawHourly, input.dailyPoints, displayDays);
+  let hourly = interpolateHourlyGrid(
+    input.rawHourly,
+    input.dailyPoints,
+    displayDays,
+    input.timeZone,
+    input.timeZoneOffsetMinutes
+  );
   let daily = input.dailyPoints.slice(0, displayDays);
 
-  const realForecastDays = countRealForecastDays(hourly);
-  const trimmed = trimToDays(daily, hourly, displayDays);
-  daily = enrichDailyFromHourly(trimmed.daily, trimmed.hourly);
+  const realForecastDays = countRealForecastDays(hourly, input.timeZone, input.timeZoneOffsetMinutes);
+  const trimmed = trimToDays(daily, hourly, displayDays, input.timeZone, input.timeZoneOffsetMinutes);
+  daily = enrichDailyFromHourly(trimmed.daily, trimmed.hourly, input.timeZone, input.timeZoneOffsetMinutes);
   hourly = trimmed.hourly;
 
   const now = new Date();

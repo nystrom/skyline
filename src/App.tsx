@@ -356,6 +356,7 @@ export default function App() {
           {displayData ? (
             <div
               id="weather-timeline-container"
+              key={`${displayData.lat},${displayData.lon}`}
               className="flex-1 min-h-0 overflow-y-auto scrollbar-none relative z-10"
             >
               <div id="weather-top-stack" ref={topStackRef} className="sticky top-0 z-30">

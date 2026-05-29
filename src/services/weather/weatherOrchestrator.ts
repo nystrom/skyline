@@ -92,7 +92,11 @@ function buildMergedResult(
 ): WeatherFetchResult {
   const primaryEntry = ordered[0];
   const mergedHourly = mergeRawHourlyLayers(ordered.map((entry) => entry.bundle.rawHourly));
-  const mergedDaily = mergeDailyLayers(ordered.map((entry) => entry.bundle.dailyPoints));
+  const mergedDaily = mergeDailyLayers(
+    ordered.map((entry) => entry.bundle.dailyPoints),
+    primaryEntry.bundle.timeZone,
+    primaryEntry.bundle.timeZoneOffsetMinutes
+  );
 
   const { data } = buildForecast({
     location,

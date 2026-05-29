@@ -114,6 +114,20 @@ export function formatShortDateAtLocation(
   return date.toLocaleDateString('en-US', fmt);
 }
 
+export function formatDayKeyAtLocation(
+  date: Date,
+  opts: { timeZone?: string; offsetMinutes?: number }
+): string {
+  const fmt: Intl.DateTimeFormatOptions = { year: 'numeric', month: '2-digit', day: '2-digit' };
+  if (opts.timeZone) {
+    return date.toLocaleDateString('en-US', { ...fmt, timeZone: opts.timeZone });
+  }
+  if (typeof opts.offsetMinutes === 'number') {
+    return toOffsetDate(date, opts.offsetMinutes).toLocaleDateString('en-US', { ...fmt, timeZone: 'UTC' });
+  }
+  return date.toLocaleDateString('en-US', fmt);
+}
+
 export function formatTime(date: Date, format: '12h' | '24h'): string {
   if (format === '24h') {
     return formatTime24(date);

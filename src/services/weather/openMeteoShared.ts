@@ -12,6 +12,7 @@ import { coalesceNumber } from './numbers';
 import type { ProviderRawBundle, StandardDailyPoint, WeatherLocationInput } from './sharedTypes';
 import { wmoCodeToKind } from './weatherKind';
 import { wmoToDesc, wmoToIcon } from './wmoUtils';
+import { formatDayKeyAtLocation } from '../../utils/unitConverter';
 
 const BASE_PARAMS =
   'current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,is_day,cloud_cover&hourly=temperature_2m,relative_humidity_2m,weather_code,precipitation_probability,precipitation,is_day,cloud_cover,wind_speed_10m,wind_direction_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,wind_speed_10m_max,wind_direction_10m_dominant&timezone=auto&forecast_days=16&wind_speed_unit=ms&timeformat=unixtime';
@@ -35,6 +36,8 @@ function parseOpenMeteoRawBundle(
     daily: Record<string, number[]>;
   },
   extensionDays: ExtensionDay[],
+  lat: number,
+  lon: number,
   timeZone?: string,
   timeZoneOffsetMinutes?: number
 ): ProviderRawBundle {
@@ -46,10 +49,11 @@ function parseOpenMeteoRawBundle(
 
   const primaryDailyPoints: StandardDailyPoint[] = daily.time.map((t: number, i: number) => {
     const d = new Date(t * 1000);
-    const dk = d.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const locOpts = { timeZone, offsetMinutes: timeZoneOffsetMinutes };
+    const dk = formatDayKeyAtLocation(d, locOpts);
     const extMatch = extensionDays.find((ext) => {
       const extDate = new Date(ext.time * 1000);
-      return extDate.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) === dk;
+      return formatDayKeyAtLocation(extDate, locOpts) === dk;
     });
     const sunriseVal = extMatch
       ? new Date(extMatch.sunrise * 1000)
@@ -61,7 +65,7 @@ function parseOpenMeteoRawBundle(
       : daily.sunset?.[i]
         ? new Date(daily.sunset[i] * 1000)
         : new Date(d.getTime() + 18 * 3600 * 1000);
-    const { moonriseTime, moonsetTime } = getMoonriseMoonset(d, i);
+    const { moonriseTime, moonsetTime } = getMoonriseMoonset(d, lat, lon, i);
     return {
       date: d,
       tempMin: coalesceNumber(daily.temperature_2m_min[i], NaN),
@@ -89,7 +93,7 @@ function parseOpenMeteoRawBundle(
   extensionDays.forEach((ext) => {
     if (ext.time > lastValidT && mergedDailyPoints.length < TARGET_FORECAST_DAYS) {
       const d = new Date(ext.time * 1000);
-      const { moonriseTime, moonsetTime } = getMoonriseMoonset(d, mergedDailyPoints.length);
+      const { moonriseTime, moonsetTime } = getMoonriseMoonset(d, lat, lon, mergedDailyPoints.length);
       mergedDailyPoints.push({
         date: d,
         tempMin: ext.temp_min,
@@ -209,6 +213,8 @@ export async function fetchOpenMeteoRawBundle(
       daily: Record<string, number[]>;
     },
     extensionDays,
+    lat,
+    lon,
     tz,
     typeof offsetSec === 'number' ? offsetSec / 60 : undefined
   );
