@@ -66,21 +66,6 @@ function toLocationInput(loc: SavedLocation): WeatherLocationInput {
   };
 }
 
-function buildSupplementWarnings(
-  primary: ProviderRawBundle,
-  supplements: { id: ConcreteWeatherProvider; bundle: ProviderRawBundle }[],
-  mergedDailyCount: number
-): string[] {
-  if (supplements.length === 0) return [];
-
-  const primaryDayCount = primary.dailyPoints.length;
-  if (mergedDailyCount <= primaryDayCount) return [];
-
-  const fallbackNames = [...new Set(supplements.map((s) => s.id))];
-  return [
-    `Forecast extended to ${mergedDailyCount} days using ${fallbackNames.join(', ')} (primary had ${primaryDayCount} day(s)).`,
-  ];
-}
 
 async function fetchRawFromProvider(
   providerId: ConcreteWeatherProvider,
@@ -106,15 +91,8 @@ function buildMergedResult(
   consolidatedWarnings?: WeatherWarning[]
 ): WeatherFetchResult {
   const primaryEntry = ordered[0];
-  const supplements = ordered.slice(1);
   const mergedHourly = mergeRawHourlyLayers(ordered.map((entry) => entry.bundle.rawHourly));
   const mergedDaily = mergeDailyLayers(ordered.map((entry) => entry.bundle.dailyPoints));
-
-  const warnings = buildSupplementWarnings(
-    primaryEntry.bundle,
-    supplements,
-    mergedDaily.length
-  );
 
   const { data } = buildForecast({
     location,
@@ -132,7 +110,7 @@ function buildMergedResult(
     data,
     source: 'live',
     resolvedProvider: primaryId,
-    warnings,
+    warnings: [],
   };
 }
 

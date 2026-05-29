@@ -261,6 +261,13 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.22 }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0.15, bottom: 0.15 }}
+            dragMomentum={false}
+            onDragEnd={(_, info) => {
+              if (Math.abs(info.velocity.y) > 400 || Math.abs(info.offset.y) > 60) handleCancelSettings();
+            }}
             className="overflow-hidden mx-4 mt-2 rounded-2xl bg-[color:var(--sky-surface)] text-[color:var(--sky-fg)] border border-[color:var(--sky-border)]"
           >
             <div className="p-4 space-y-3">

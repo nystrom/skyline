@@ -199,6 +199,13 @@ export const LocationsScreen: React.FC<LocationsScreenProps> = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: '30px' }}
       transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+      drag="y"
+      dragConstraints={{ top: 0, bottom: 0 }}
+      dragElastic={{ top: 0, bottom: 0.3 }}
+      dragMomentum={false}
+      onDragEnd={(_, info) => {
+        if (info.velocity.y > 400 || info.offset.y > 80) onClose();
+      }}
       className="absolute inset-0 z-50 flex flex-col p-6 overflow-hidden rounded-b-2xl md:rounded-3xl border border-[color:var(--sky-border)] backdrop-blur-md"
       style={{
         background: 'linear-gradient(180deg, var(--sky-bg), var(--sky-bg-2))',

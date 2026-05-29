@@ -405,6 +405,13 @@ export default function App() {
                   initial={{ scale: 0.95, y: 15 }}
                   animate={{ scale: 1, y: 0 }}
                   exit={{ scale: 0.95, y: 15 }}
+                  drag="y"
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  dragElastic={{ top: 0.1, bottom: 0.4 }}
+                  dragMomentum={false}
+                  onDragEnd={(_, info) => {
+                    if (info.velocity.y > 400 || info.offset.y > 80) setSelectedWarnings(null);
+                  }}
                   onClick={(e) => e.stopPropagation()}
                   className="bg-[color:var(--sky-bg)] border border-[color:var(--sky-border)] w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col max-h-[70%] overflow-hidden relative"
                 >

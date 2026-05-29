@@ -283,65 +283,61 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWar
   const hasWarnings = events.some((e) => e.warnings && e.warnings.length > 0);
 
   return (
-    <div className="border-b border-black/[0.04]" style={rowStyle}>
-      {/* Sticky first row: icon + description pins at top while card scrolls out */}
-      <div
-        className="sticky flex items-stretch"
-        style={{ top: 'var(--sky-top-stack-h, 0px)', zIndex: 15, ...rowStyle }}
-      >
-        <div className="w-12 shrink-0 flex items-center justify-end pr-2">
-          <span className="text-[12px] sky-mono font-medium text-[color:var(--sky-dim)]">
-            {formatTimeAtLocation(events[0].time, '24h', tz)}
-          </span>
-        </div>
-        <LineCol />
-        <div className="flex-1 min-w-0 flex items-center py-[11px] pr-4 gap-3">
-          <WeatherIcon
-            name={first.iconName}
-            size={15}
-            className="shrink-0 text-[color:var(--sky-muted)]"
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] capitalize truncate">
-                {first.description}
-              </span>
-              {hasWarnings && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const allWarnings: WeatherWarning[] = [];
-                    const seenKeys = new Set<string>();
-                    events.forEach((evt) => {
-                      (evt.warnings || []).forEach((w) => {
-                        const key = `${w.sender}:${w.event}:${w.starts.getTime()}:${w.ends.getTime()}`;
-                        if (!seenKeys.has(key)) {
-                          seenKeys.add(key);
-                          allWarnings.push(w);
-                        }
-                      });
-                    });
-                    onShowWarnings?.(allWarnings);
-                  }}
-                  className="text-red-500 hover:text-red-400 cursor-pointer focus:outline-none flex items-center justify-center p-0.5 rounded-full hover:bg-red-500/10 transition-colors shrink-0"
-                  aria-label="Show warnings"
-                >
-                  <AlertTriangle size={13} />
-                </button>
-              )}
-              {showRain && (
-                <span className="text-[11px] sky-mono text-[color:var(--sky-dim)] shrink-0">
-                  {first.precipProb}% rain
+    <div className="border-b border-black/[0.04] relative" style={rowStyle}>
+      {/* Absolute sticky container pins the condition relative to the entire card's height,
+          allowing the individual times and temperatures to scroll naturally. */}
+      <div className="absolute inset-y-0 left-[68px] right-0 pointer-events-none z-10">
+        <div
+          className="sticky pointer-events-none"
+          style={{ top: 'calc(var(--sky-top-stack-h, 0px) + 29px + 6px)' }}
+        >
+          <div className="flex items-center py-[11px] pr-4 gap-3 pointer-events-auto max-w-[calc(100%-80px)]">
+            <WeatherIcon
+              name={first.iconName}
+              size={15}
+              className="shrink-0 text-[color:var(--sky-muted)]"
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] capitalize truncate">
+                  {first.description}
                 </span>
-              )}
+                {hasWarnings && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const allWarnings: WeatherWarning[] = [];
+                      const seenKeys = new Set<string>();
+                      events.forEach((evt) => {
+                        (evt.warnings || []).forEach((w) => {
+                          const key = `${w.sender}:${w.event}:${w.starts.getTime()}:${w.ends.getTime()}`;
+                          if (!seenKeys.has(key)) {
+                            seenKeys.add(key);
+                            allWarnings.push(w);
+                          }
+                        });
+                      });
+                      onShowWarnings?.(allWarnings);
+                    }}
+                    className="text-red-500 hover:text-red-400 cursor-pointer focus:outline-none flex items-center justify-center p-0.5 rounded-full hover:bg-red-500/10 transition-colors shrink-0"
+                    aria-label="Show warnings"
+                  >
+                    <AlertTriangle size={13} />
+                  </button>
+                )}
+                {showRain && (
+                  <span className="text-[11px] sky-mono text-[color:var(--sky-dim)] shrink-0">
+                    {first.precipProb}% rain
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-          <WindTemp event={events[0]} settings={settings} />
         </div>
       </div>
 
-      {/* Remaining rows: time + line + wind/temp only */}
-      {events.slice(1).map((evt) => (
+      {/* Render rows with empty space in the middle to receive the overlay */}
+      {events.map((evt) => (
         <div key={evt.id} className="flex items-stretch">
           <div className="w-12 shrink-0 flex items-center justify-end pr-2">
             <span className="text-[12px] sky-mono font-medium text-[color:var(--sky-dim)]">

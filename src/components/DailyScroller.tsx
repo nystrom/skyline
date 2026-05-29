@@ -90,7 +90,7 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
   };
 
   const handleDayClick = (idx: number) => {
-    onBeforeTimelineScroll?.(500);
+    onBeforeTimelineScroll?.(800);
     onSelectDay(idx);
     setTimeout(() => scrollToTimelineDay(idx), 50);
   };

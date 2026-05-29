@@ -162,11 +162,13 @@
 @media (max-width: 768px) {
   #app-root-container {
     height: 100dvh;
+    min-height: 0;
     overflow: hidden;
   }
 
   #phone-skin-container {
     height: 100dvh;
+    min-height: 0;
   }
 }
 
