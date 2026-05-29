@@ -144,7 +144,12 @@ export function interpolateHourlyGrid(
   }
 
   const now = new Date();
-  const gridStart = startOfLocalDay(now);
+  const todayStart = startOfLocalDay(now);
+  // daily[0].date is midnight in the location's timezone from the API. If forecast data
+  // is stale (day 0 = yesterday), start the grid there so day 0 gets hourly cards.
+  const gridStart = daily.length > 0 && daily[0].date.getTime() < todayStart.getTime()
+    ? daily[0].date
+    : todayStart;
 
   const lastDay = daily[Math.min(numDays, daily.length) - 1];
   const gridEnd = new Date(lastDay.date);

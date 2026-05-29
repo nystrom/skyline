@@ -102,6 +102,8 @@ function buildMergedResult(
     dailyPoints: mergedDaily,
     targetDays: TARGET_FORECAST_DAYS,
     warnings: consolidatedWarnings,
+    timeZone: primaryEntry.bundle.timeZone,
+    timeZoneOffsetMinutes: primaryEntry.bundle.timeZoneOffsetMinutes,
   });
 
   data.resolvedProvider = primaryId;

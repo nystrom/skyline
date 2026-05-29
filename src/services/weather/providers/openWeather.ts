@@ -12,7 +12,7 @@ import { getMoonriseMoonset } from '../moonUtils';
 import type { ProviderFetchContext, ProviderRawBundle, RawHourlySlot, StandardDailyPoint, WeatherLocationInput } from '../sharedTypes';
 import type { WeatherProviderAdapter } from '../providerTypes';
 
-import { owIconToKind, weatherKindToIcon } from '../weatherKind';
+import { owIconToKind, owIdToKind, owWeatherArrayToKind, weatherKindToIcon } from '../weatherKind';
 
 function iconMap(oWeatherIcon: string): string {
   return weatherKindToIcon(owIconToKind(oWeatherIcon), oWeatherIcon.endsWith('d'));
@@ -54,19 +54,26 @@ async function fetchOpenWeatherRawBundle(
   const rawHourly: RawHourlySlot[] = [];
   list.forEach((item) => {
     const main = item.main as Record<string, number>;
-    const weather = (item.weather as Array<{ main?: string; icon?: string }>) || [];
+    const weather = (item.weather as Array<{ id?: number; main?: string; description?: string; icon?: string }>) || [];
     const wind = item.wind as { speed: number; deg: number };
     const rain = item.rain as Record<string, number> | undefined;
     const snow = item.snow as Record<string, number> | undefined;
     const rainHour = rain?.['3h'] || rain?.['1h'] || 0;
     const snowHour = snow?.['3h'] || snow?.['1h'] || 0;
     const owIcon = weather[0]?.icon || '01d';
+
+    const kind = owWeatherArrayToKind(weather);
+    const selectedElement = weather.find((w) => w.id !== undefined && owIdToKind(w.id) === kind) || weather[0];
+    const description = selectedElement?.description || selectedElement?.main || 'Clear';
+    const isDay = owIcon.endsWith('d');
+    const iconName = weatherKindToIcon(kind, isDay);
+
     rawHourly.push({
       time: new Date((item.dt as number) * 1000),
       temp: main.temp,
-      kind: owIconToKind(owIcon),
-      description: weather[0]?.main || 'Clear',
-      iconName: iconMap(owIcon),
+      kind,
+      description,
+      iconName,
       windSpeed: wind.speed,
       windDeg: wind.deg,
       precipProb: ((item.pop as number) || 0) * 100,
@@ -118,16 +125,22 @@ async function fetchOpenWeatherRawBundle(
     const daySunset = new Date(dateObj);
     daySunset.setHours(sunsetTime.getHours(), sunsetTime.getMinutes(), sunsetTime.getSeconds());
     const { moonriseTime, moonsetTime } = getMoonriseMoonset(dateObj, d);
-    const repWeather = (repItem.weather as Array<{ description?: string; icon?: string }>) || [];
-
+    const repWeather = (repItem.weather as Array<{ id?: number; description?: string; main?: string; icon?: string }>) || [];
     const repIcon = repWeather[0]?.icon || '01d';
+
+    const kind = owWeatherArrayToKind(repWeather);
+    const selectedElement = repWeather.find((w) => w.id !== undefined && owIdToKind(w.id) === kind) || repWeather[0];
+    const description = selectedElement?.description || selectedElement?.main || 'Clear sky';
+    const isDay = repIcon.endsWith('d');
+    const iconName = weatherKindToIcon(kind, isDay);
+
     dailyPoints.push({
       date: dateObj,
       tempMin: tempMin === Infinity ? (currentData.main as { temp_min: number }).temp_min : tempMin,
       tempMax: tempMax === -Infinity ? (currentData.main as { temp_max: number }).temp_max : tempMax,
-      kind: owIconToKind(repIcon),
-      description: repWeather[0]?.description || 'Clear sky',
-      iconName: iconMap(repIcon),
+      kind,
+      description,
+      iconName,
       precipProb: maxPrecipProb * 100,
       precipAccum: totalPrecipAccum,
       windSpeed: totalWindSpeed / items.length,
@@ -141,7 +154,7 @@ async function fetchOpenWeatherRawBundle(
 
   const sys = currentData.sys as { sunrise?: number; sunset?: number; country?: string };
   const curMain = currentData.main as Record<string, number>;
-  const curWeather = (currentData.weather as Array<{ description?: string; icon?: string }>) || [];
+  const curWeather = (currentData.weather as Array<{ id?: number; description?: string; main?: string; icon?: string }>) || [];
   const curWind = currentData.wind as { speed: number; deg: number };
   const curRain = currentData.rain as Record<string, number> | undefined;
   const curSnow = currentData.snow as Record<string, number> | undefined;
@@ -150,6 +163,13 @@ async function fetchOpenWeatherRawBundle(
   const { moonriseTime: curMoonrise, moonsetTime: curMoonset } = getMoonriseMoonset(new Date(), 0);
   const currentPrecip = (curRain?.['1h'] || curRain?.['3h'] || 0) + (curSnow?.['1h'] || curSnow?.['3h'] || 0);
 
+  const curIcon = curWeather[0]?.icon || '01d';
+  const curKind = owWeatherArrayToKind(curWeather);
+  const curSelectedElement = curWeather.find((w) => w.id !== undefined && owIdToKind(w.id) === curKind) || curWeather[0];
+  const curDescription = curSelectedElement?.description || curSelectedElement?.main || 'Clear';
+  const curIsDay = curIcon.endsWith('d');
+  const curIconName = weatherKindToIcon(curKind, curIsDay);
+
   return {
     rawHourly,
     dailyPoints,
@@ -157,8 +177,8 @@ async function fetchOpenWeatherRawBundle(
     timeZoneOffsetMinutes: Math.round(timezoneOffsetSec / 60),
     current: {
       temp: Math.round(curMain.temp),
-      description: curWeather[0]?.description || 'Clear',
-      iconName: iconMap(curWeather[0]?.icon || '01d'),
+      description: curDescription,
+      iconName: curIconName,
       humidity: curMain.humidity,
       windSpeed: curWind.speed,
       windDeg: curWind.deg,

@@ -22,16 +22,19 @@ export function assembleTimelineAndForecasts(
   currentConditions?: WeatherData['current'],
 ): DailyForecast[] {
   const tz = { timeZone, offsetMinutes: timeZoneOffsetMinutes };
+  const dayKeyOpts: Intl.DateTimeFormatOptions = { year: 'numeric', month: '2-digit', day: '2-digit' };
+  if (timeZone) dayKeyOpts.timeZone = timeZone;
+
   const dailyForecasts: DailyForecast[] = [];
   const groupedHourly: Record<string, StandardHourlyPoint[]> = {};
   hourlyPoints.forEach((pt) => {
-    const dayKey = pt.time.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const dayKey = pt.time.toLocaleDateString('en-US', dayKeyOpts);
     if (!groupedHourly[dayKey]) groupedHourly[dayKey] = [];
     groupedHourly[dayKey].push(pt);
   });
 
   dailyPoints.forEach((day, dIdx) => {
-    const dayKey = day.date.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const dayKey = day.date.toLocaleDateString('en-US', dayKeyOpts);
     const dayHours = groupedHourly[dayKey] || [];
     const timelineEvents: WeatherTimelineEvent[] = [];
 
