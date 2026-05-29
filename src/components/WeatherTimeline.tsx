@@ -286,7 +286,7 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWar
     <div className="border-b border-black/[0.04] relative" style={rowStyle}>
       {/* Absolute sticky container pins the condition relative to the entire card's height,
           allowing the individual times and temperatures to scroll naturally. */}
-      <div className="absolute inset-y-0 left-[68px] right-0 pointer-events-none z-10">
+      <div className="absolute inset-y-0 left-[4.25rem] right-0 pointer-events-none z-10">
         <div
           className="sticky pointer-events-none"
           style={{ top: 'calc(var(--sky-top-stack-h, 0px) + 29px + 6px)' }}

@@ -111,6 +111,7 @@ export default function App() {
   const loadAbortRef = useRef<AbortController | null>(null);
   const scrollSpyBlockedRef = useRef(false);
   const topStackRef = useRef<HTMLDivElement>(null);
+  const scrollToNowAfterRender = useRef(false);
 
   const blockScrollSpy = (ms = 700) => {
     scrollSpyBlockedRef.current = true;
@@ -197,6 +198,23 @@ export default function App() {
     loadWeatherData();
   };
 
+  useEffect(() => {
+    if (!scrollToNowAfterRender.current) return;
+    scrollToNowAfterRender.current = false;
+    blockScrollSpy(500);
+    setTimeout(() => {
+      const scrollContainer = document.getElementById('weather-timeline-container');
+      const element = document.getElementById('timeline-event-now');
+      if (!scrollContainer || !element) return;
+      const containerTop = scrollContainer.getBoundingClientRect().top;
+      const elementTop = element.getBoundingClientRect().top;
+      const pinned = readTopStackHeight(scrollContainer);
+      const visibleHeight = scrollContainer.clientHeight - pinned;
+      const targetTop = elementTop - containerTop + scrollContainer.scrollTop - pinned - visibleHeight * 0.2;
+      scrollContainer.scrollTo({ top: Math.max(0, targetTop), behavior: 'auto' });
+    }, 100);
+  }, [weatherData]);
+
   const readTopStackHeight = (scrollContainer: HTMLElement): number => {
     const raw = getComputedStyle(scrollContainer).getPropertyValue('--sky-top-stack-h').trim();
     const n = Number.parseFloat(raw.replace('px', ''));
@@ -256,8 +274,10 @@ export default function App() {
       setWeatherData(result.data);
       setLastLiveData(result.data);
       lastLiveRef.current = result.data;
-      if (location.id !== settings.activeLocation?.id) {
+      const locationChanged = location.id !== settings.activeLocation?.id;
+      if (locationChanged) {
         updateSettings({ activeLocation: location, city: location.label });
+        scrollToNowAfterRender.current = true;
       }
       setDataSource(result.source === 'cached' ? 'cached' : 'live');
       setFetchWarnings(result.warnings);
