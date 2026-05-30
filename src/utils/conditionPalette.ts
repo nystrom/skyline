@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -5,6 +6,48 @@
 
 import type { CSSProperties } from 'react';
 import { WeatherKind } from '../services/weather/weatherKind';
+
+// Statically import all weather background images to ensure Vite bundles and resolves them correctly at build-time.
+import blizzard from '../../assets/images/weather/blizzard.png';
+import clear from '../../assets/images/weather/clear.png';
+import cold from '../../assets/images/weather/cold.png';
+import drizzle from '../../assets/images/weather/drizzle.png';
+import fog from '../../assets/images/weather/fog.png';
+import freezing_rain from '../../assets/images/weather/freezing_rain.png';
+import hazy from '../../assets/images/weather/hazy.png';
+import hot from '../../assets/images/weather/hot.png';
+import hurricane from '../../assets/images/weather/hurricane.png';
+import ice from '../../assets/images/weather/ice.png';
+import ice_pellets from '../../assets/images/weather/ice_pellets.png';
+import mist from '../../assets/images/weather/mist.png';
+import mostly_cloudy from '../../assets/images/weather/mostly_cloudy.png';
+import overcast from '../../assets/images/weather/overcast.png';
+import partly_cloudy from '../../assets/images/weather/partly_cloudy.png';
+import rain_heavy from '../../assets/images/weather/rain_heavy.png';
+import rain_light from '../../assets/images/weather/rain_light.png';
+import rain_moderate from '../../assets/images/weather/rain_moderate.png';
+import sand from '../../assets/images/weather/sand.png';
+import scattered_clouds from '../../assets/images/weather/scattered_clouds.png';
+import showers from '../../assets/images/weather/showers.png';
+import sleet from '../../assets/images/weather/sleet.png';
+import smoke from '../../assets/images/weather/smoke.png';
+import snow_heavy from '../../assets/images/weather/snow_heavy.png';
+import snow_light from '../../assets/images/weather/snow_light.png';
+import snow_moderate from '../../assets/images/weather/snow_moderate.png';
+import snow_showers from '../../assets/images/weather/snow_showers.png';
+import thunderstorm from '../../assets/images/weather/thunderstorm.png';
+import thunderstorm_hail from '../../assets/images/weather/thunderstorm_hail.png';
+import tornado from '../../assets/images/weather/tornado.png';
+import wind from '../../assets/images/weather/wind.png';
+import unknown from '../../assets/images/weather/unknown.png';
+
+const IMAGE_MAP: Record<string, string> = {
+  blizzard, clear, cold, drizzle, fog, freezing_rain, hazy, hot, hurricane,
+  ice, ice_pellets, mist, mostly_cloudy, overcast, partly_cloudy, rain_heavy,
+  rain_light, rain_moderate, sand, scattered_clouds, showers, sleet, smoke,
+  snow_heavy, snow_light, snow_moderate, snow_showers, thunderstorm, thunderstorm_hail,
+  tornado, wind, unknown
+};
 
 type Rgb = { r: number; g: number; b: number };
 
@@ -19,14 +62,6 @@ function rgb(r: number, g: number, b: number): Rgb {
 function normalizeText(s: string | undefined | null): string {
   return (s ?? '').trim().toLowerCase();
 }
-
-const AVAILABLE_IMAGES = new Set([
-  'blizzard', 'clear', 'cold', 'drizzle', 'fog', 'freezing_rain', 'hazy', 'hot', 'hurricane',
-  'ice', 'ice_pellets', 'mist', 'mostly_cloudy', 'overcast', 'partly_cloudy', 'rain_heavy',
-  'rain_light', 'rain_moderate', 'sand', 'scattered_clouds', 'showers', 'sleet', 'smoke',
-  'snow_heavy', 'snow_light', 'snow_moderate', 'snow_showers', 'thunderstorm', 'thunderstorm_hail',
-  'tornado', 'wind'
-]);
 
 export type ConditionTintKind =
   | 'clear'
@@ -153,8 +188,7 @@ export function conditionCardStyle(
     `color-mix(in srgb, var(--sky-surface) calc(100% - var(--sky-wash-a)), rgb(${r} ${g} ${b}) var(--sky-wash-a)), ` +
     `color-mix(in srgb, var(--sky-surface-2) calc(100% - var(--sky-wash-b)), rgb(${r} ${g} ${b}) var(--sky-wash-b)))`;
 
-  const imageName = weatherKind && AVAILABLE_IMAGES.has(weatherKind) ? weatherKind : 'unknown';
-  const imgUrl = new URL(`../../assets/images/weather/${imageName}.png`, import.meta.url).href;
+  const imgUrl = (weatherKind && IMAGE_MAP[weatherKind]) ? IMAGE_MAP[weatherKind] : IMAGE_MAP.unknown;
 
   return {
     background:
@@ -187,8 +221,7 @@ export function conditionRowStyle(
 
   const fallbackBg = `color-mix(in srgb, var(--sky-surface) calc(100% - var(--sky-row-wash)), rgb(${r} ${g} ${b}) var(--sky-row-wash))`;
 
-  const imageName = weatherKind && AVAILABLE_IMAGES.has(weatherKind) ? weatherKind : 'unknown';
-  const imgUrl = new URL(`../../assets/images/weather/${imageName}.png`, import.meta.url).href;
+  const imgUrl = (weatherKind && IMAGE_MAP[weatherKind]) ? IMAGE_MAP[weatherKind] : IMAGE_MAP.unknown;
 
   return {
     background:
