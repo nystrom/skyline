@@ -202,7 +202,6 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({
   // If it's a standard hourly status element (NOT a triggered instantaneous marker)
   if (!isSpecial) {
     const condStyle = conditionCardStyle(event.iconName, event.description, event.kind);
-    const showRain = event.precipProb !== undefined && event.precipProb > 10;
     const showWind = event.windSpeed !== undefined;
     return (
       <div 
@@ -231,26 +230,18 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({
               <span className="text-[13px] font-extrabold text-[color:var(--sky-fg)] capitalize whitespace-normal break-words leading-tight w-full">
                 {event.description}
               </span>
-              {(showRain || showWind) && (
+              {showWind && (
                 <span className="text-[11px] text-[color:var(--sky-dim)] font-semibold sky-mono mt-0.5 flex items-center gap-2">
-                  {showRain && (
-                    <span className="inline-flex items-center gap-1">
-                      <WeatherIcon name="precip" size={12} className="text-[color:var(--sky-accent)]" />
-                      <span>{event.precipProb}%</span>
+                  <span className="inline-flex items-center gap-1">
+                    <WindDirectionArrow
+                      deg={(event.windSpeed ?? 0) <= 0 ? 0 : (event.windDeg ?? 0)}
+                      size={11}
+                      title={`Wind direction: ${event.windDeg}°`}
+                    />
+                    <span>
+                      {convertWindSpeed(event.windSpeed, settings.windSpeedUnit)} {settings.windSpeedUnit}
                     </span>
-                  )}
-                  {showWind && (
-                    <span className="inline-flex items-center gap-1">
-                      <WindDirectionArrow
-                        deg={(event.windSpeed ?? 0) <= 0 ? 0 : (event.windDeg ?? 0)}
-                        size={11}
-                        title={`Wind direction: ${event.windDeg}°`}
-                      />
-                      <span>
-                        {convertWindSpeed(event.windSpeed, settings.windSpeedUnit)} {settings.windSpeedUnit}
-                      </span>
-                    </span>
-                  )}
+                  </span>
                 </span>
               )}
             </div>

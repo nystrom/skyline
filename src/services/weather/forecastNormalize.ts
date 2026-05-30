@@ -88,14 +88,7 @@ export function mergeDailyLayers(
     .slice(0, TARGET_FORECAST_DAYS);
 }
 
-function rawSlotToStandard(slot: RawHourlySlot, interpolated: boolean): StandardHourlyPoint {
-  const code = coalesceNumber(slot.weatherCode, 0);
-  const isDay = slot.isDay === true;
-  const kind = slot.kind ?? wmoCodeToKind(code);
-
-  let description = weatherKindToDesc(kind);
-  const precipProb = coalesceNumber(slot.precipProb);
-
+function getNormalizedDescription(kind: WeatherKind, precipProb: number): string {
   const isRainKind = [
     WeatherKind.Drizzle,
     WeatherKind.RainLight,
@@ -109,15 +102,26 @@ function rawSlotToStandard(slot: RawHourlySlot, interpolated: boolean): Standard
 
   if (isRainKind) {
     if (precipProb < 30) {
-      description = 'Slight chance of rain';
+      return 'Slight chance of rain';
     } else if (precipProb < 50) {
-      description = 'Chance of rain';
+      return 'Chance of rain';
     } else if (precipProb < 75) {
-      description = 'Likely rain';
+      return 'Likely rain';
     } else {
-      description = 'Rain';
+      return 'Rain';
     }
   }
+
+  return weatherKindToDesc(kind);
+}
+
+function rawSlotToStandard(slot: RawHourlySlot, interpolated: boolean): StandardHourlyPoint {
+  const code = coalesceNumber(slot.weatherCode, 0);
+  const isDay = slot.isDay === true;
+  const kind = slot.kind ?? wmoCodeToKind(code);
+
+  const precipProb = coalesceNumber(slot.precipProb);
+  const description = getNormalizedDescription(kind, precipProb);
 
   return {
     time: slot.time,
@@ -244,16 +248,18 @@ export function interpolateHourlyGrid(
     const code = coalesceNumber(skySource?.weatherCode, 0);
     const isDay = skySource?.isDay === true;
     const kind = skySource?.kind ?? wmoCodeToKind(code);
+    const precipProb = coalesceNumber(skySource?.precipProb, dailyForDay?.precipProb ?? 0);
+    const description = getNormalizedDescription(kind, precipProb);
 
     result.push({
       time: new Date(t),
       temp,
       kind,
-      description: skySource?.description ?? dailyForDay?.description ?? wmoToDesc(code),
+      description,
       iconName: skySource?.iconName ?? dailyForDay?.iconName ?? weatherKindToIcon(kind, isDay),
       windSpeed,
       windDeg,
-      precipProb: coalesceNumber(skySource?.precipProb, dailyForDay?.precipProb ?? 0),
+      precipProb,
       precipAccum: 0,
       humidity: coalesceNumber(skySource?.humidity, 60),
       interpolated: true,
@@ -341,12 +347,15 @@ function enrichDailyFromHourly(
       if (!Number.isFinite(tempMax)) tempMax = Math.max(...observedTemps);
     }
 
+    const description = getNormalizedDescription(day.kind, day.precipProb);
+
     return {
       ...day,
       tempMin: Number.isFinite(tempMin) ? tempMin : coalesceNumber(tempMin, 0),
       tempMax: Number.isFinite(tempMax) ? tempMax : coalesceNumber(tempMax, 0),
       precipAccum,
       peakTempTime,
+      description,
     };
   });
 }
@@ -373,10 +382,12 @@ export function buildForecast(input: ForecastBuildInput): ForecastBuildResult {
   const now = new Date();
   const warnings = input.warnings || [];
 
+  const currentKind = input.current.kind ?? hourly[0]?.kind ?? input.rawHourly[0]?.kind ?? WeatherKind.Unknown;
   const currentWarnings = warnings.filter((w) => w.starts <= now && now < w.ends);
   const currentWithWarnings = {
     ...input.current,
-    kind: input.current.kind ?? hourly[0]?.kind ?? input.rawHourly[0]?.kind ?? WeatherKind.Unknown,
+    kind: currentKind,
+    description: getNormalizedDescription(currentKind, input.current.precipProb ?? 0),
     warnings: currentWarnings.length > 0 ? currentWarnings : undefined,
   };
 

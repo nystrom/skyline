@@ -218,8 +218,7 @@ interface HourlyRowProps {
 }
 
 const HourlyRow: React.FC<HourlyRowProps> = ({ event, settings, tz, onShowWarnings }) => {
-  const rowStyle = conditionRowStyle(event.iconName, event.description, event.precipProb);
-  const showRain = (event.precipProb ?? 0) > 5;
+  const rowStyle = conditionRowStyle(event.iconName, event.description, event.precipProb, event.kind);
 
   return (
     <div className="flex items-stretch border-b border-black/[0.04]" style={rowStyle}>
@@ -241,7 +240,7 @@ const HourlyRow: React.FC<HourlyRowProps> = ({ event, settings, tz, onShowWarnin
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] capitalize truncate leading-tight">
+            <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] capitalize whitespace-normal break-words leading-tight">
               {event.description}
             </span>
             {event.warnings && event.warnings.length > 0 && (
@@ -257,11 +256,6 @@ const HourlyRow: React.FC<HourlyRowProps> = ({ event, settings, tz, onShowWarnin
               </button>
             )}
           </div>
-          {showRain && (
-            <span className="text-[11px] sky-mono text-[color:var(--sky-dim)] mt-[2px] block">
-              {event.precipProb}% rain
-            </span>
-          )}
         </div>
         <WindTemp event={event} settings={settings} />
       </div>
@@ -279,8 +273,8 @@ interface MergedCardProps {
 const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWarnings }) => {
   const first = events[0];
   const rowStyle = conditionRowStyle(first.iconName, first.description, first.precipProb, first.kind);
-  const showRain = (first.precipProb ?? 0) > 5;
   const hasWarnings = events.some((e) => e.warnings && e.warnings.length > 0);
+  const showPrecip = (first.precipProb ?? 0) > 5;
 
   return (
     <div className="border-b border-black/[0.04] relative" style={rowStyle}>
@@ -298,36 +292,38 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWar
               className="shrink-0 text-[color:var(--sky-muted)]"
             />
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] capitalize whitespace-normal break-words leading-tight">
-                  {first.description}
-                </span>
-                {hasWarnings && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const allWarnings: WeatherWarning[] = [];
-                      const seenKeys = new Set<string>();
-                      events.forEach((evt) => {
-                        (evt.warnings || []).forEach((w) => {
-                          const key = `${w.sender}:${w.event}:${w.starts.getTime()}:${w.ends.getTime()}`;
-                          if (!seenKeys.has(key)) {
-                            seenKeys.add(key);
-                            allWarnings.push(w);
-                          }
+              <div className="flex flex-col justify-center">
+                <div className="flex items-center gap-2">
+                  <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] capitalize whitespace-normal break-words leading-tight">
+                    {first.description}
+                  </span>
+                  {hasWarnings && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const allWarnings: WeatherWarning[] = [];
+                        const seenKeys = new Set<string>();
+                        events.forEach((evt) => {
+                          (evt.warnings || []).forEach((w) => {
+                            const key = `${w.sender}:${w.event}:${w.starts.getTime()}:${w.ends.getTime()}`;
+                            if (!seenKeys.has(key)) {
+                              seenKeys.add(key);
+                              allWarnings.push(w);
+                            }
+                          });
                         });
-                      });
-                      onShowWarnings?.(allWarnings);
-                    }}
-                    className="text-red-500 hover:text-red-400 cursor-pointer focus:outline-none flex items-center justify-center p-0.5 rounded-full hover:bg-red-500/10 transition-colors shrink-0"
-                    aria-label="Show warnings"
-                  >
-                    <AlertTriangle size={13} />
-                  </button>
-                )}
-                {showRain && (
-                  <span className="text-[11px] sky-mono text-[color:var(--sky-dim)] shrink-0">
-                    {first.precipProb}% rain
+                        onShowWarnings?.(allWarnings);
+                      }}
+                      className="text-red-500 hover:text-red-400 cursor-pointer focus:outline-none flex items-center justify-center p-0.5 rounded-full hover:bg-red-500/10 transition-colors shrink-0"
+                      aria-label="Show warnings"
+                    >
+                      <AlertTriangle size={13} />
+                    </button>
+                  )}
+                </div>
+                {showPrecip && (
+                  <span className="text-[11px] sky-mono text-[color:var(--sky-dim)] mt-[2px] block">
+                    {first.precipProb}% chance of precip
                   </span>
                 )}
               </div>
