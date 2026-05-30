@@ -33,10 +33,12 @@ export type ConditionTintKind =
 export function weatherKindToTintKind(kind: WeatherKind): ConditionTintKind {
   switch (kind) {
     case WeatherKind.Clear:
+    case WeatherKind.ScatteredClouds:
     case WeatherKind.PartlyCloudy:
     case WeatherKind.Hot:
       return 'clear';
-    case WeatherKind.Cloudy:
+    case WeatherKind.MostlyCloudy:
+    case WeatherKind.Overcast:
       return 'cloud';
     case WeatherKind.Fog:
     case WeatherKind.Hazy:

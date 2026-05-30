@@ -7,8 +7,10 @@
 export enum WeatherKind {
   // Fair & Cloud cover
   Clear = 'clear',
+  ScatteredClouds = 'scattered_clouds',
   PartlyCloudy = 'partly_cloudy',
-  Cloudy = 'cloudy',
+  MostlyCloudy = 'mostly_cloudy',
+  Overcast = 'overcast',
 
   // Visibility & Atmosphere
   Fog = 'fog',
@@ -55,8 +57,9 @@ export enum WeatherKind {
 /** Map a WMO weather code to a WeatherKind. */
 export function wmoCodeToKind(code: number): WeatherKind {
   if (code === 0) return WeatherKind.Clear;
-  if (code === 1 || code === 2) return WeatherKind.PartlyCloudy;
-  if (code === 3) return WeatherKind.Cloudy;
+  if (code === 1) return WeatherKind.ScatteredClouds;
+  if (code === 2) return WeatherKind.PartlyCloudy;
+  if (code === 3) return WeatherKind.Overcast;
   if (code === 4 || code === 5) return WeatherKind.Hazy;
   if (code === 10) return WeatherKind.Mist;
   if (code === 45 || code === 48) return WeatherKind.Fog;
@@ -81,7 +84,8 @@ export function wmoCodeToKind(code: number): WeatherKind {
 export function owIconToKind(icon: string): WeatherKind {
   if (icon.startsWith('01')) return WeatherKind.Clear;
   if (icon.startsWith('02')) return WeatherKind.PartlyCloudy;
-  if (icon.startsWith('03') || icon.startsWith('04')) return WeatherKind.Cloudy;
+  if (icon.startsWith('03')) return WeatherKind.ScatteredClouds;
+  if (icon.startsWith('04')) return WeatherKind.MostlyCloudy;
   if (icon.startsWith('09')) return WeatherKind.Showers;
   if (icon.startsWith('10')) return WeatherKind.RainModerate;
   if (icon.startsWith('11')) return WeatherKind.Thunderstorm;
@@ -134,8 +138,10 @@ export function owIdToKind(id: number): WeatherKind {
   if (id === 800) return WeatherKind.Clear;
 
   // Group 80x: Clouds
-  if (id === 801 || id === 802) return WeatherKind.PartlyCloudy;
-  if (id === 803 || id === 804) return WeatherKind.Cloudy;
+  if (id === 801) return WeatherKind.PartlyCloudy;
+  if (id === 802) return WeatherKind.ScatteredClouds;
+  if (id === 803) return WeatherKind.MostlyCloudy;
+  if (id === 804) return WeatherKind.Overcast;
 
   return WeatherKind.Unknown;
 }
@@ -174,10 +180,14 @@ export function getWeatherKindPriority(kind: WeatherKind): number {
     case WeatherKind.Hazy:
     case WeatherKind.Mist:
       return 50;
-    case WeatherKind.Cloudy:
-      return 40;
+    case WeatherKind.Overcast:
+      return 45;
+    case WeatherKind.MostlyCloudy:
+      return 35;
     case WeatherKind.PartlyCloudy:
       return 30;
+    case WeatherKind.ScatteredClouds:
+      return 25;
     case WeatherKind.Clear:
       return 20;
     default:
@@ -263,9 +273,11 @@ export function nwsUrlToKind(url: string): WeatherKind {
   if (lowercase.includes('snow') || lowercase.includes('sn')) return WeatherKind.SnowModerate;
 
   // Clouds and fair sky
-  if (lowercase.includes('skc') || lowercase.includes('few')) return WeatherKind.Clear;
-  if (lowercase.includes('sct')) return WeatherKind.PartlyCloudy;
-  if (lowercase.includes('bkn') || lowercase.includes('ovc')) return WeatherKind.Cloudy;
+  if (lowercase.includes('skc') || lowercase.includes('clear')) return WeatherKind.Clear;
+  if (lowercase.includes('few')) return WeatherKind.PartlyCloudy;
+  if (lowercase.includes('sct') || lowercase.includes('scattered')) return WeatherKind.ScatteredClouds;
+  if (lowercase.includes('bkn') || lowercase.includes('mostlycloudy') || lowercase.includes('mostly_cloudy') || lowercase.includes('broken')) return WeatherKind.MostlyCloudy;
+  if (lowercase.includes('ovc') || lowercase.includes('overcast')) return WeatherKind.Overcast;
 
   // Smoke
   if (lowercase.includes('smoke')) return WeatherKind.Smoke;
@@ -287,8 +299,10 @@ export function weatherKindToIcon(kind: WeatherKind, isDay: boolean): string {
   switch (kind) {
     case WeatherKind.Clear:
       return isDay ? 'sun' : 'moon';
+    case WeatherKind.ScatteredClouds:
     case WeatherKind.PartlyCloudy:
-    case WeatherKind.Cloudy:
+    case WeatherKind.MostlyCloudy:
+    case WeatherKind.Overcast:
     case WeatherKind.Fog:
       return 'cloud';
     case WeatherKind.Drizzle:
@@ -338,8 +352,10 @@ export function weatherKindToIcon(kind: WeatherKind, isDay: boolean): string {
 export function weatherKindToDesc(kind: WeatherKind): string {
   switch (kind) {
     case WeatherKind.Clear:           return 'Clear sky';
+    case WeatherKind.ScatteredClouds: return 'Scattered clouds';
     case WeatherKind.PartlyCloudy:    return 'Partly cloudy';
-    case WeatherKind.Cloudy:          return 'Cloudy';
+    case WeatherKind.MostlyCloudy:    return 'Mostly cloudy';
+    case WeatherKind.Overcast:        return 'Overcast';
     case WeatherKind.Fog:             return 'Fog';
     case WeatherKind.Drizzle:         return 'Drizzle';
     case WeatherKind.RainLight:       return 'Light rain';
