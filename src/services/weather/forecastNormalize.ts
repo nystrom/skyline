@@ -23,7 +23,7 @@ import type {
   StandardDailyPoint,
   StandardHourlyPoint,
 } from './sharedTypes';
-import { wmoCodeToKind, weatherKindToIcon } from './weatherKind';
+import { wmoCodeToKind, weatherKindToIcon, WeatherKind } from './weatherKind';
 import { wmoToDesc, wmoToIcon } from './wmoUtils';
 
 function isObservedSlot(slot: RawHourlySlot): boolean {
@@ -349,6 +349,7 @@ export function buildForecast(input: ForecastBuildInput): ForecastBuildResult {
   const currentWarnings = warnings.filter((w) => w.starts <= now && now < w.ends);
   const currentWithWarnings = {
     ...input.current,
+    kind: input.current.kind ?? hourly[0]?.kind ?? input.rawHourly[0]?.kind ?? WeatherKind.Unknown,
     warnings: currentWarnings.length > 0 ? currentWarnings : undefined,
   };
 

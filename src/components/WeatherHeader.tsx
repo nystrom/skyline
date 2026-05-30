@@ -16,6 +16,7 @@ import {
 } from '../utils/unitConverter';
 import { WindDirectionArrow } from './WindDirectionArrow';
 import { formatLocationLabel } from '../utils/savedLocation';
+import { conditionCardStyle } from '../utils/conditionPalette';
 
 interface WeatherHeaderProps {
   weatherData: WeatherData;
@@ -224,10 +225,13 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
 
   const chips = [rainChip(), humidityChip(), windChip()];
 
+  const headerStyle = conditionCardStyle(current.iconName, current.description, current.kind);
+
   return (
     <div
       id="weather-header-container"
-      className="w-full bg-[color:var(--sky-surface)] shrink-0 relative border-b border-[color:var(--sky-border)]"
+      className="w-full shrink-0 relative border-b border-[color:var(--sky-border)]"
+      style={headerStyle}
     >
       {/* TOP BAR: location · time + controls */}
       <div className="flex items-center justify-between px-4 pt-3">

@@ -278,7 +278,7 @@ interface MergedCardProps {
 
 const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWarnings }) => {
   const first = events[0];
-  const rowStyle = conditionRowStyle(first.iconName, first.description, first.precipProb);
+  const rowStyle = conditionRowStyle(first.iconName, first.description, first.precipProb, first.kind);
   const showRain = (first.precipProb ?? 0) > 5;
   const hasWarnings = events.some((e) => e.warnings && e.warnings.length > 0);
 

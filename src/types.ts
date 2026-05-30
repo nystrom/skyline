@@ -64,6 +64,7 @@ export interface WeatherData {
     temp: number;
     description: string;
     iconName: string;
+    kind?: import('./services/weather/weatherKind').WeatherKind;
     humidity: number;
     windSpeed: number;
     windDeg: number;

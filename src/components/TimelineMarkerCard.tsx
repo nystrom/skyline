@@ -201,7 +201,7 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({
 
   // If it's a standard hourly status element (NOT a triggered instantaneous marker)
   if (!isSpecial) {
-    const condStyle = conditionCardStyle(event.iconName, event.description);
+    const condStyle = conditionCardStyle(event.iconName, event.description, event.kind);
     const showRain = event.precipProb !== undefined && event.precipProb > 10;
     const showWind = event.windSpeed !== undefined;
     return (

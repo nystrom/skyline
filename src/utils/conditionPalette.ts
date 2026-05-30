@@ -20,6 +20,14 @@ function normalizeText(s: string | undefined | null): string {
   return (s ?? '').trim().toLowerCase();
 }
 
+const AVAILABLE_IMAGES = new Set([
+  'blizzard', 'clear', 'cold', 'drizzle', 'fog', 'freezing_rain', 'hazy', 'hot', 'hurricane',
+  'ice', 'ice_pellets', 'mist', 'mostly_cloudy', 'overcast', 'partly_cloudy', 'rain_heavy',
+  'rain_light', 'rain_moderate', 'sand', 'scattered_clouds', 'showers', 'sleet', 'smoke',
+  'snow_heavy', 'snow_light', 'snow_moderate', 'snow_showers', 'thunderstorm', 'thunderstorm_hail',
+  'tornado', 'wind'
+]);
+
 export type ConditionTintKind =
   | 'clear'
   | 'cloud'
@@ -132,15 +140,27 @@ export const CONDITION_PALETTE: Record<ConditionTintKind, { label: string; rgb: 
   other: { label: 'Other', rgb: rgb(124, 246, 255), hex: '#7CF6FF' },
 };
 
-export function conditionCardStyle(iconName: string | undefined | null, description?: string | null): CSSProperties {
-  const kind = conditionTintKind(iconName, description);
-  const { r, g, b } = CONDITION_PALETTE[kind].rgb;
+export function conditionCardStyle(
+  iconName: string | undefined | null,
+  description?: string | null,
+  weatherKind?: WeatherKind,
+): CSSProperties {
+  const tint = conditionTintKind(iconName, description);
+  const { r, g, b } = CONDITION_PALETTE[tint].rgb;
+
+  const fallbackBg =
+    `linear-gradient(180deg, ` +
+    `color-mix(in srgb, var(--sky-surface) calc(100% - var(--sky-wash-a)), rgb(${r} ${g} ${b}) var(--sky-wash-a)), ` +
+    `color-mix(in srgb, var(--sky-surface-2) calc(100% - var(--sky-wash-b)), rgb(${r} ${g} ${b}) var(--sky-wash-b)))`;
+
+  const imageName = weatherKind && AVAILABLE_IMAGES.has(weatherKind) ? weatherKind : 'unknown';
+  const imgUrl = new URL(`../../assets/images/weather/${imageName}.png`, import.meta.url).href;
 
   return {
     background:
-      `linear-gradient(180deg, ` +
-      `color-mix(in srgb, var(--sky-surface) calc(100% - var(--sky-wash-a)), rgb(${r} ${g} ${b}) var(--sky-wash-a)), ` +
-      `color-mix(in srgb, var(--sky-surface-2) calc(100% - var(--sky-wash-b)), rgb(${r} ${g} ${b}) var(--sky-wash-b)))`,
+      `linear-gradient(0deg, color-mix(in srgb, var(--sky-surface) 75%, transparent), color-mix(in srgb, var(--sky-surface) 75%, transparent)), ` +
+      `url(${imgUrl}) center/cover no-repeat, ` +
+      fallbackBg,
     borderColor: `color-mix(in srgb, var(--sky-border) calc(100% - var(--sky-wash-border)), rgb(${r} ${g} ${b}) var(--sky-wash-border))`,
     boxShadow: 'none',
   };
@@ -160,11 +180,21 @@ export function conditionRowStyle(
   iconName: string | undefined | null,
   description?: string | null,
   precipProb?: number,
+  weatherKind?: WeatherKind,
 ): CSSProperties {
-  const kind = conditionTintKind(iconName, description);
-  const { r, g, b } = rowRgb(kind, normalizeText(description), precipProb);
+  const tint = conditionTintKind(iconName, description);
+  const { r, g, b } = rowRgb(tint, normalizeText(description), precipProb);
+
+  const fallbackBg = `color-mix(in srgb, var(--sky-surface) calc(100% - var(--sky-row-wash)), rgb(${r} ${g} ${b}) var(--sky-row-wash))`;
+
+  const imageName = weatherKind && AVAILABLE_IMAGES.has(weatherKind) ? weatherKind : 'unknown';
+  const imgUrl = new URL(`../../assets/images/weather/${imageName}.png`, import.meta.url).href;
+
   return {
-    background: `color-mix(in srgb, var(--sky-surface) calc(100% - var(--sky-row-wash)), rgb(${r} ${g} ${b}) var(--sky-row-wash))`,
+    background:
+      `linear-gradient(0deg, color-mix(in srgb, var(--sky-surface) 85%, transparent), color-mix(in srgb, var(--sky-surface) 85%, transparent)), ` +
+      `url(${imgUrl}) center/cover no-repeat, ` +
+      fallbackBg,
   };
 }
 
