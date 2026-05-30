@@ -23,7 +23,7 @@ import type {
   StandardDailyPoint,
   StandardHourlyPoint,
 } from './sharedTypes';
-import { wmoCodeToKind, weatherKindToIcon, WeatherKind } from './weatherKind';
+import { wmoCodeToKind, weatherKindToIcon, WeatherKind, weatherKindToDesc } from './weatherKind';
 import { wmoToDesc, wmoToIcon } from './wmoUtils';
 
 function isObservedSlot(slot: RawHourlySlot): boolean {
@@ -92,15 +92,42 @@ function rawSlotToStandard(slot: RawHourlySlot, interpolated: boolean): Standard
   const code = coalesceNumber(slot.weatherCode, 0);
   const isDay = slot.isDay === true;
   const kind = slot.kind ?? wmoCodeToKind(code);
+
+  let description = weatherKindToDesc(kind);
+  const precipProb = coalesceNumber(slot.precipProb);
+
+  const isRainKind = [
+    WeatherKind.Drizzle,
+    WeatherKind.RainLight,
+    WeatherKind.RainModerate,
+    WeatherKind.RainHeavy,
+    WeatherKind.Showers,
+    WeatherKind.FreezingRain,
+    WeatherKind.Sleet,
+    WeatherKind.IcePellets
+  ].includes(kind);
+
+  if (isRainKind) {
+    if (precipProb < 30) {
+      description = 'Slight chance of rain';
+    } else if (precipProb < 50) {
+      description = 'Chance of rain';
+    } else if (precipProb < 75) {
+      description = 'Likely rain';
+    } else {
+      description = 'Rain';
+    }
+  }
+
   return {
     time: slot.time,
     temp: coalesceNumber(slot.temp),
     kind,
-    description: slot.description ?? wmoToDesc(code),
+    description,
     iconName: slot.iconName ?? weatherKindToIcon(kind, isDay),
     windSpeed: coalesceNumber(slot.windSpeed),
     windDeg: coalesceNumber(slot.windDeg),
-    precipProb: coalesceNumber(slot.precipProb),
+    precipProb,
     precipAccum: coalesceNumber(slot.precipAccum),
     humidity: coalesceNumber(slot.humidity, 60),
     interpolated,

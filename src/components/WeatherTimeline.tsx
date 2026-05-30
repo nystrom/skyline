@@ -299,7 +299,7 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWar
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] capitalize truncate">
+                <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] capitalize whitespace-normal break-words leading-tight">
                   {first.description}
                 </span>
                 {hasWarnings && (

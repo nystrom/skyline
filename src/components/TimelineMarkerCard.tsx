@@ -219,7 +219,7 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({
 
         {/* Content detail layout */}
         <div
-          className="flex-1 min-w-0 border px-3.5 h-[72px] rounded-none flex items-center justify-between shadow-sm transition-all duration-150"
+          className="flex-1 min-w-0 border px-3.5 min-h-[72px] h-auto py-2 rounded-none flex items-center justify-between shadow-sm transition-all duration-150"
           style={condStyle}
         >
           {/* Left part: Icon + condition label (sky-wash style) */}
