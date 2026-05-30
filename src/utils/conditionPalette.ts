@@ -192,7 +192,7 @@ export function conditionCardStyle(
 
   return {
     background:
-      `linear-gradient(0deg, color-mix(in srgb, var(--sky-surface) 75%, transparent), color-mix(in srgb, var(--sky-surface) 75%, transparent)), ` +
+      `linear-gradient(0deg, color-mix(in srgb, var(--sky-surface) 55%, transparent), color-mix(in srgb, var(--sky-surface) 55%, transparent)), ` +
       `url(${imgUrl}) center/cover no-repeat, ` +
       fallbackBg,
     borderColor: `color-mix(in srgb, var(--sky-border) calc(100% - var(--sky-wash-border)), rgb(${r} ${g} ${b}) var(--sky-wash-border))`,
@@ -225,7 +225,7 @@ export function conditionRowStyle(
 
   return {
     background:
-      `linear-gradient(0deg, color-mix(in srgb, var(--sky-surface) 85%, transparent), color-mix(in srgb, var(--sky-surface) 85%, transparent)), ` +
+      `linear-gradient(0deg, color-mix(in srgb, var(--sky-surface) 65%, transparent), color-mix(in srgb, var(--sky-surface) 65%, transparent)), ` +
       `url(${imgUrl}) center/cover no-repeat, ` +
       fallbackBg,
   };
