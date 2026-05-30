@@ -7,6 +7,7 @@ import React, { useRef, useEffect } from 'react';
 import { DailyForecast, UserSettings } from '../types';
 import { WeatherIcon } from './WeatherIcon';
 import { convertTemp } from '../utils/unitConverter';
+import { conditionRowStyle } from '../utils/conditionPalette';
 
 interface DailyScrollerProps {
   daily: DailyForecast[];
@@ -130,6 +131,7 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
       >
         {daily.map((day, idx) => {
           const isSelected = selectedDayIdx === idx;
+          const bgStyle = conditionRowStyle(day.iconName, day.description, day.precipProb, day.kind);
           return (
             <button
               id={`horizontal-pill-${idx}`}
@@ -140,6 +142,7 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
                   ? 'border-b-[color:var(--sky-fg)] opacity-100'
                   : 'border-b-transparent opacity-50 hover:opacity-75'
               }`}
+              style={bgStyle}
             >
               <span className="text-[11px] font-bold uppercase tracking-wide sky-mono text-[color:var(--sky-fg)]">
                 {day.dayName.slice(0, 3)}

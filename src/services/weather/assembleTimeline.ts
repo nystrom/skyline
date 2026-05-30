@@ -161,6 +161,7 @@ export function assembleTimelineAndForecasts(
       windSpeed: Number(day.windSpeed.toFixed(1)),
       windDeg: day.windDeg,
       timelineEvents,
+      kind: day.kind,
     });
   });
 

@@ -49,6 +49,7 @@ export interface DailyForecast {
   windSpeed: number;
   windDeg: number;
   timelineEvents: WeatherTimelineEvent[];
+  kind?: import('./services/weather/weatherKind').WeatherKind;
 }
 
 export interface WeatherData {

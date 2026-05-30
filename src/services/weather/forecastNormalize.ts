@@ -396,6 +396,15 @@ export function buildForecast(input: ForecastBuildInput): ForecastBuildResult {
   daily = enrichDailyFromHourly(trimmed.daily, trimmed.hourly, input.timeZone, input.timeZoneOffsetMinutes);
   hourly = trimmed.hourly;
 
+  if (daily.length > 0 && Number.isFinite(input.currentTemp)) {
+    if (input.currentTemp > daily[0].tempMax) {
+      daily[0].tempMax = input.currentTemp;
+    }
+    if (input.currentTemp < daily[0].tempMin) {
+      daily[0].tempMin = input.currentTemp;
+    }
+  }
+
   const now = new Date();
   const warnings = input.warnings || [];
 
@@ -407,6 +416,21 @@ export function buildForecast(input: ForecastBuildInput): ForecastBuildResult {
     description: getNormalizedDescription(currentKind, input.current.precipProb ?? 0),
     warnings: currentWarnings.length > 0 ? currentWarnings : undefined,
   };
+
+  const nowTime = now.getTime();
+  const enclosingHour = hourly.find(
+    (h) => h.time.getTime() <= nowTime && nowTime < h.time.getTime() + 3600_000
+  );
+  if (enclosingHour) {
+    if (
+      enclosingHour.kind !== currentWithWarnings.kind ||
+      enclosingHour.description !== currentWithWarnings.description
+    ) {
+      enclosingHour.kind = currentWithWarnings.kind;
+      enclosingHour.description = currentWithWarnings.description;
+      enclosingHour.iconName = currentWithWarnings.iconName;
+    }
+  }
 
   const hourlyWithWarnings = hourly.map((h) => {
     const activeWarnings = warnings.filter((w) => w.starts <= h.time && h.time < w.ends);

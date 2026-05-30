@@ -357,9 +357,10 @@ interface InstantRowProps {
   event: WeatherTimelineEvent;
   settings: UserSettings;
   tz: TZ;
+  rowStyle?: React.CSSProperties;
 }
 
-const InstantRow: React.FC<InstantRowProps> = ({ event, settings, tz }) => {
+const InstantRow: React.FC<InstantRowProps> = ({ event, settings, tz, rowStyle }) => {
   const theme = instantTheme(event.type);
   const [nowTick, setNowTick] = useState(() => new Date());
 
@@ -380,7 +381,8 @@ const InstantRow: React.FC<InstantRowProps> = ({ event, settings, tz }) => {
   return (
     <div
       id={event.type === 'now' ? 'timeline-event-now' : `timeline-instant-${event.id}`}
-      className="flex items-center py-[5px]"
+      className="flex items-center py-[5px] border-b border-black/[0.04]"
+      style={rowStyle}
     >
       {/* Time: colored accent, right-aligned */}
       <div className="w-12 shrink-0 flex items-center justify-end pr-2">
@@ -493,42 +495,6 @@ export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
     return () => container.removeEventListener('scroll', syncActiveDay);
   }, [daily.length, onActiveDayChange, scrollSpyBlockedRef]);
 
-  const renderItem = (item: GroupedItem): React.ReactNode => {
-    const evt = item.events[0];
-
-    if (item.type === 'merged') {
-      return (
-        <MergedCard
-          key={evt.id}
-          events={item.events}
-          settings={settings}
-          tz={tz}
-          onShowWarnings={onShowWarnings}
-        />
-      );
-    }
-
-    if (INSTANT_TYPES.has(evt.type)) {
-      if (evt.type === 'sunrise' || evt.type === 'sunset') {
-        if (!settings.showSunriseSunset) return null;
-      }
-      if (evt.type === 'moonrise' || evt.type === 'moonset') {
-        if (!settings.showMoonriseMoonset) return null;
-      }
-      return <InstantRow key={evt.id} event={evt} settings={settings} tz={tz} />;
-    }
-
-    return (
-      <HourlyRow
-        key={evt.id}
-        event={evt}
-        settings={settings}
-        tz={tz}
-        onShowWarnings={onShowWarnings}
-      />
-    );
-  };
-
   return (
     <div className="pb-20">
       {daily.map((day, dIdx) => {
@@ -554,7 +520,68 @@ export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
             </div>
 
             <div className={`transition-opacity duration-300 ${isSelectedDay ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}>
-              {items.map(renderItem)}
+              {(() => {
+                let lastHourlyEvent = day.timelineEvents.find((e) => e.type === 'hourly_status');
+                return items.map((item) => {
+                  const evt = item.events[0];
+
+                  if (item.type === 'merged') {
+                    lastHourlyEvent = item.events[item.events.length - 1];
+                    return (
+                      <MergedCard
+                        key={evt.id}
+                        events={item.events}
+                        settings={settings}
+                        tz={tz}
+                        onShowWarnings={onShowWarnings}
+                      />
+                    );
+                  }
+
+                  if (evt.type === 'hourly_status') {
+                    lastHourlyEvent = evt;
+                    return (
+                      <HourlyRow
+                        key={evt.id}
+                        event={evt}
+                        settings={settings}
+                        tz={tz}
+                        onShowWarnings={onShowWarnings}
+                      />
+                    );
+                  }
+
+                  if (INSTANT_TYPES.has(evt.type)) {
+                    if (evt.type === 'sunrise' || evt.type === 'sunset') {
+                      if (!settings.showSunriseSunset) return null;
+                    }
+                    if (evt.type === 'moonrise' || evt.type === 'moonset') {
+                      if (!settings.showMoonriseMoonset) return null;
+                    }
+
+                    const rowStyle = lastHourlyEvent
+                      ? conditionRowStyle(
+                          lastHourlyEvent.iconName,
+                          lastHourlyEvent.description,
+                          lastHourlyEvent.precipProb,
+                          lastHourlyEvent.kind,
+                        )
+                      : undefined;
+
+                    return (
+                      <InstantRow
+                        key={evt.id}
+                        event={evt}
+                        settings={settings}
+                        tz={tz}
+                        rowStyle={rowStyle}
+                      />
+                    );
+                  }
+
+                  return null;
+                });
+              })()}
             </div>
           </div>
         );
