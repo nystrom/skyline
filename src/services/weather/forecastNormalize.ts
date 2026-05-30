@@ -112,6 +112,23 @@ function getNormalizedDescription(kind: WeatherKind, precipProb: number): string
     }
   }
 
+  const isThunderstormKind = [
+    WeatherKind.Thunderstorm,
+    WeatherKind.ThunderstormHail
+  ].includes(kind);
+
+  if (isThunderstormKind) {
+    if (precipProb < 30) {
+      return 'Slight chance of thunderstorms';
+    } else if (precipProb < 50) {
+      return 'Chance of thunderstorms';
+    } else if (precipProb < 75) {
+      return 'Likely thunderstorms';
+    } else {
+      return kind === WeatherKind.ThunderstormHail ? 'Thunderstorms with hail' : 'Thunderstorms';
+    }
+  }
+
   return weatherKindToDesc(kind);
 }
 

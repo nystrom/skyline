@@ -227,7 +227,7 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({
               <WeatherIcon name={event.iconName} size={16} />
             </div>
             <div className="min-w-0 flex flex-col justify-center">
-              <span className="text-[13px] font-extrabold text-[color:var(--sky-fg)] capitalize whitespace-normal break-words leading-tight w-full">
+              <span className="text-[13px] font-extrabold text-[color:var(--sky-fg)] whitespace-normal break-words leading-tight w-full">
                 {event.description}
               </span>
               {showWind && (

@@ -240,7 +240,7 @@ const HourlyRow: React.FC<HourlyRowProps> = ({ event, settings, tz, onShowWarnin
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] capitalize whitespace-normal break-words leading-tight">
+            <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] whitespace-normal break-words leading-tight">
               {event.description}
             </span>
             {event.warnings && event.warnings.length > 0 && (
@@ -294,7 +294,7 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWar
             <div className="flex-1 min-w-0">
               <div className="flex flex-col justify-center">
                 <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] capitalize whitespace-normal break-words leading-tight">
+                  <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] whitespace-normal break-words leading-tight">
                     {first.description}
                   </span>
                   {hasWarnings && (
@@ -432,7 +432,7 @@ const InstantRow: React.FC<InstantRowProps> = ({ event, settings, tz }) => {
               <WeatherIcon name="locate" size={10} className={theme.icon} />
               <span className="uppercase tracking-wide">Now</span>
               <span className="font-normal opacity-70 text-[10px]">·</span>
-              <span className="font-normal capitalize">{event.description}</span>
+              <span className="font-normal">{event.description}</span>
               <span className="font-bold">{convertTemp(event.temp ?? 0, settings.tempUnit)}°</span>
             </>
           )}
