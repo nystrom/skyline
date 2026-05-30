@@ -102,9 +102,9 @@ function getNormalizedDescription(kind: WeatherKind, precipProb: number): string
 
   if (isRainKind) {
     if (precipProb < 30) {
-      return 'Slight chance of rain';
+      return `Slight chance of rain ${precipProb}%`;
     } else if (precipProb < 50) {
-      return 'Chance of rain';
+      return `Chance of rain ${precipProb}%`;
     } else if (precipProb < 75) {
       return 'Likely rain';
     } else {
@@ -119,9 +119,9 @@ function getNormalizedDescription(kind: WeatherKind, precipProb: number): string
 
   if (isThunderstormKind) {
     if (precipProb < 30) {
-      return 'Slight chance of thunderstorms';
+      return `Slight chance of thunderstorms ${precipProb}%`;
     } else if (precipProb < 50) {
-      return 'Chance of thunderstorms';
+      return `Chance of thunderstorms ${precipProb}%`;
     } else if (precipProb < 75) {
       return 'Likely thunderstorms';
     } else {

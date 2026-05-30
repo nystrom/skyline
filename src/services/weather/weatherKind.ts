@@ -83,7 +83,7 @@ export function wmoCodeToKind(code: number): WeatherKind {
 /** Map an OpenWeather icon code (e.g. "01d", "10n") to a WeatherKind. */
 export function owIconToKind(icon: string): WeatherKind {
   if (icon.startsWith('01')) return WeatherKind.Clear;
-  if (icon.startsWith('02')) return WeatherKind.PartlyCloudy;
+  if (icon.startsWith('02')) return WeatherKind.ScatteredClouds;
   if (icon.startsWith('03')) return WeatherKind.ScatteredClouds;
   if (icon.startsWith('04')) return WeatherKind.MostlyCloudy;
   if (icon.startsWith('09')) return WeatherKind.Showers;
@@ -138,7 +138,7 @@ export function owIdToKind(id: number): WeatherKind {
   if (id === 800) return WeatherKind.Clear;
 
   // Group 80x: Clouds
-  if (id === 801) return WeatherKind.PartlyCloudy;
+  if (id === 801) return WeatherKind.ScatteredClouds;
   if (id === 802) return WeatherKind.ScatteredClouds;
   if (id === 803) return WeatherKind.MostlyCloudy;
   if (id === 804) return WeatherKind.Overcast;
@@ -273,8 +273,8 @@ export function nwsUrlToKind(url: string): WeatherKind {
   if (lowercase.includes('snow') || lowercase.includes('sn')) return WeatherKind.SnowModerate;
 
   // Clouds and fair sky
+  if (lowercase.includes('mostlyclear') || lowercase.includes('mostly_clear') || lowercase.includes('few')) return WeatherKind.ScatteredClouds;
   if (lowercase.includes('skc') || lowercase.includes('clear')) return WeatherKind.Clear;
-  if (lowercase.includes('few')) return WeatherKind.PartlyCloudy;
   if (lowercase.includes('sct') || lowercase.includes('scattered')) return WeatherKind.ScatteredClouds;
   if (lowercase.includes('bkn') || lowercase.includes('mostlycloudy') || lowercase.includes('mostly_cloudy') || lowercase.includes('broken')) return WeatherKind.MostlyCloudy;
   if (lowercase.includes('ovc') || lowercase.includes('overcast')) return WeatherKind.Overcast;

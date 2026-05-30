@@ -175,6 +175,53 @@ export const CONDITION_PALETTE: Record<ConditionTintKind, { label: string; rgb: 
   other: { label: 'Other', rgb: rgb(124, 246, 255), hex: '#7CF6FF' },
 };
 
+export function getCloudShadingFactor(kind: WeatherKind | undefined | null): number {
+  if (!kind) return 0;
+  switch (kind) {
+    case WeatherKind.Clear:
+    case WeatherKind.Hot:
+      return 0.0;
+    case WeatherKind.ScatteredClouds:
+      return 0.05;
+    case WeatherKind.PartlyCloudy:
+      return 0.12;
+    case WeatherKind.MostlyCloudy:
+      return 0.22;
+    case WeatherKind.Overcast:
+    case WeatherKind.Mist:
+    case WeatherKind.Hazy:
+    case WeatherKind.Smoke:
+      return 0.32;
+    case WeatherKind.Fog:
+      return 0.35;
+    case WeatherKind.Drizzle:
+    case WeatherKind.RainLight:
+    case WeatherKind.SnowLight:
+    case WeatherKind.Cold:
+    case WeatherKind.Wind:
+      return 0.25;
+    case WeatherKind.RainModerate:
+    case WeatherKind.SnowModerate:
+    case WeatherKind.Sleet:
+    case WeatherKind.Ice:
+    case WeatherKind.IcePellets:
+      return 0.35;
+    case WeatherKind.RainHeavy:
+    case WeatherKind.SnowHeavy:
+    case WeatherKind.Showers:
+    case WeatherKind.SnowShowers:
+      return 0.4;
+    case WeatherKind.Thunderstorm:
+    case WeatherKind.ThunderstormHail:
+    case WeatherKind.Blizzard:
+    case WeatherKind.Hurricane:
+    case WeatherKind.Tornado:
+      return 0.45;
+    default:
+      return 0.0;
+  }
+}
+
 export function conditionCardStyle(
   iconName: string | undefined | null,
   description?: string | null,
@@ -189,10 +236,15 @@ export function conditionCardStyle(
     `color-mix(in srgb, var(--sky-surface-2) calc(100% - var(--sky-wash-b)), rgb(${r} ${g} ${b}) var(--sky-wash-b)))`;
 
   const imgUrl = (weatherKind && IMAGE_MAP[weatherKind]) ? IMAGE_MAP[weatherKind] : IMAGE_MAP.unknown;
+  const shadingPercent = Math.round(getCloudShadingFactor(weatherKind) * 100);
+  const shadingOverlay = shadingPercent > 0
+    ? `linear-gradient(0deg, color-mix(in srgb, rgb(40 44 52) ${shadingPercent}%, transparent), color-mix(in srgb, rgb(40 44 52) ${shadingPercent}%, transparent)), `
+    : '';
 
   return {
     background:
       `linear-gradient(0deg, color-mix(in srgb, var(--sky-surface) 55%, transparent), color-mix(in srgb, var(--sky-surface) 55%, transparent)), ` +
+      shadingOverlay +
       `url(${imgUrl}) center/cover no-repeat, ` +
       fallbackBg,
     borderColor: `color-mix(in srgb, var(--sky-border) calc(100% - var(--sky-wash-border)), rgb(${r} ${g} ${b}) var(--sky-wash-border))`,
@@ -222,10 +274,15 @@ export function conditionRowStyle(
   const fallbackBg = `color-mix(in srgb, var(--sky-surface) calc(100% - var(--sky-row-wash)), rgb(${r} ${g} ${b}) var(--sky-row-wash))`;
 
   const imgUrl = (weatherKind && IMAGE_MAP[weatherKind]) ? IMAGE_MAP[weatherKind] : IMAGE_MAP.unknown;
+  const shadingPercent = Math.round(getCloudShadingFactor(weatherKind) * 100);
+  const shadingOverlay = shadingPercent > 0
+    ? `linear-gradient(0deg, color-mix(in srgb, rgb(40 44 52) ${shadingPercent}%, transparent), color-mix(in srgb, rgb(40 44 52) ${shadingPercent}%, transparent)), `
+    : '';
 
   return {
     background:
       `linear-gradient(0deg, color-mix(in srgb, var(--sky-surface) 65%, transparent), color-mix(in srgb, var(--sky-surface) 65%, transparent)), ` +
+      shadingOverlay +
       `url(${imgUrl}) center/cover no-repeat, ` +
       fallbackBg,
   };
