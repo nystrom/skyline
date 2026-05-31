@@ -64,35 +64,50 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
 
     const containerTop = scrollContainer.getBoundingClientRect().top;
     const pinned = readTopStackHeight(scrollContainer);
-    const visibleHeight = scrollContainer.clientHeight - pinned;
 
-    // Today: scroll to NOW at 20% down, same as clicking current conditions.
+    // Today: scroll to the hour preceding NOW
     if (idx === 0) {
-      const nowEl = document.getElementById('timeline-event-now');
-      if (nowEl) {
-        const nowTop = nowEl.getBoundingClientRect().top;
-        const target = nowTop - containerTop + scrollContainer.scrollTop - pinned - visibleHeight * 0.2;
+      const now = new Date();
+      const targetHour = Math.max(0, now.getHours() - 1);
+      const targetDate = new Date();
+      targetDate.setHours(targetHour, 0, 0, 0);
+      const targetId = `timeline-hour-row-${targetDate.getFullYear()}-${targetDate.getMonth()}-${targetDate.getDate()}-${targetDate.getHours()}`;
+
+      const targetEl = document.getElementById(targetId) || document.getElementById('timeline-event-now');
+      if (targetEl) {
+        const targetTop = targetEl.getBoundingClientRect().top;
+        const target = targetTop - containerTop + scrollContainer.scrollTop - pinned;
         fastScrollTo(scrollContainer, Math.max(0, target), 450);
         return;
       }
     }
 
+    // Other days: scroll to the hour preceding SUNRISE (if available), otherwise to 6am
+    const day = daily[idx];
     const dayAnchor = document.getElementById(`timeline-day-anchor-${idx}`);
-    if (!dayAnchor) return;
+    if (day && dayAnchor) {
+      let targetHour = 6;
+      if (day.sunrise) {
+        // Sunrise date is in UTC or local? It's standard JS Date, get local hours relative to location
+        targetHour = Math.max(0, day.sunrise.getHours() - 1);
+      }
+      const targetDate = new Date(day.date);
+      targetDate.setHours(targetHour, 0, 0, 0);
+      const targetId = `timeline-hour-row-${targetDate.getFullYear()}-${targetDate.getMonth()}-${targetDate.getDate()}-${targetDate.getHours()}`;
 
-    // Minimum scroll: put the day anchor flush at the top of the visible area.
-    const dayAnchorTop = dayAnchor.getBoundingClientRect().top;
-    const targetDayStart = dayAnchorTop - containerTop + scrollContainer.scrollTop - pinned;
+      const targetEl = document.getElementById(targetId) || dayAnchor;
+      if (targetEl) {
+        const targetTop = targetEl.getBoundingClientRect().top;
+        const target = targetTop - containerTop + scrollContainer.scrollTop - pinned;
+        fastScrollTo(scrollContainer, Math.max(0, target), 450);
+        return;
+      }
+    }
 
-    // Preferred scroll: sunrise 20% down from the top of the visible area.
-    const sunriseEl = document.getElementById(`timeline-instant-event-${idx}-sunrise`);
-    if (sunriseEl) {
-      const sunriseTop = sunriseEl.getBoundingClientRect().top;
-      const targetSunrise = sunriseTop - containerTop + scrollContainer.scrollTop - pinned - visibleHeight * 0.2;
-      // If sunrise-20% would expose the previous day, fall back to day start.
-      fastScrollTo(scrollContainer, Math.max(targetDayStart, targetSunrise), 450);
-    } else {
-      fastScrollTo(scrollContainer, Math.max(0, targetDayStart), 450);
+    if (dayAnchor) {
+      const dayAnchorTop = dayAnchor.getBoundingClientRect().top;
+      const target = dayAnchorTop - containerTop + scrollContainer.scrollTop - pinned;
+      fastScrollTo(scrollContainer, Math.max(0, target), 450);
     }
   };
 

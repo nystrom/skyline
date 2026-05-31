@@ -202,13 +202,21 @@ export default function App() {
     blockScrollSpy(500);
     setTimeout(() => {
       const scrollContainer = document.getElementById('weather-timeline-container');
-      const element = document.getElementById('timeline-event-now');
-      if (!scrollContainer || !element) return;
+      if (!scrollContainer) return;
+
+      const now = new Date();
+      const targetHour = Math.max(0, now.getHours() - 1);
+      const targetDate = new Date();
+      targetDate.setHours(targetHour, 0, 0, 0);
+      const targetId = `timeline-hour-row-${targetDate.getFullYear()}-${targetDate.getMonth()}-${targetDate.getDate()}-${targetDate.getHours()}`;
+
+      const element = document.getElementById(targetId) || document.getElementById('timeline-event-now');
+      if (!element) return;
+
       const containerTop = scrollContainer.getBoundingClientRect().top;
       const elementTop = element.getBoundingClientRect().top;
       const pinned = readTopStackHeight(scrollContainer);
-      const visibleHeight = scrollContainer.clientHeight - pinned;
-      const targetTop = elementTop - containerTop + scrollContainer.scrollTop - pinned - visibleHeight * 0.2;
+      const targetTop = elementTop - containerTop + scrollContainer.scrollTop - pinned;
       scrollContainer.scrollTo({ top: Math.max(0, targetTop), behavior: 'auto' });
     }, 100);
   }, [weatherData]);
@@ -230,14 +238,21 @@ export default function App() {
     setActiveDayIdx(0);
     setTimeout(() => {
       const scrollContainer = document.getElementById('weather-timeline-container');
-      const element = document.getElementById('timeline-event-now');
-      if (!scrollContainer || !element) return;
+      if (!scrollContainer) return;
+
+      const now = new Date();
+      const targetHour = Math.max(0, now.getHours() - 1);
+      const targetDate = new Date();
+      targetDate.setHours(targetHour, 0, 0, 0);
+      const targetId = `timeline-hour-row-${targetDate.getFullYear()}-${targetDate.getMonth()}-${targetDate.getDate()}-${targetDate.getHours()}`;
+
+      const element = document.getElementById(targetId) || document.getElementById('timeline-event-now');
+      if (!element) return;
 
       const containerTop = scrollContainer.getBoundingClientRect().top;
       const elementTop = element.getBoundingClientRect().top;
       const pinned = readTopStackHeight(scrollContainer);
-      const visibleHeight = scrollContainer.clientHeight - pinned;
-      const targetTop = elementTop - containerTop + scrollContainer.scrollTop - pinned - visibleHeight * 0.2;
+      const targetTop = elementTop - containerTop + scrollContainer.scrollTop - pinned;
 
       scrollContainer.scrollTo({ top: Math.max(0, targetTop), behavior: 'auto' });
     }, 100);

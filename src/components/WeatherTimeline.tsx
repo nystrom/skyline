@@ -10,6 +10,7 @@ import { WeatherIcon } from './WeatherIcon';
 import { WindDirectionArrow } from './WindDirectionArrow';
 import { convertTemp, convertWindSpeed, formatTimeAtLocation } from '../utils/unitConverter';
 import { conditionRowStyle } from '../utils/conditionPalette';
+import { WeatherKind } from '../services/weather/weatherKind';
 
 interface WeatherTimelineProps {
   daily: DailyForecast[];
@@ -292,6 +293,58 @@ const WindTemp: React.FC<{ event: WeatherTimelineEvent; settings: UserSettings }
   </div>
 );
 
+function getPrecipSubtitle(event: WeatherTimelineEvent): string | null {
+  const prob = event.precipProb ?? 0;
+  if (prob <= 5) return null;
+
+  const descLower = event.description.toLowerCase();
+  const alreadyIncludes =
+    descLower.includes('chance of rain') ||
+    descLower.includes('chance of thunderstorm') ||
+    descLower.includes('chance of snow');
+
+  if (alreadyIncludes) return null;
+
+  // Determine if wintry/snow
+  let isSnow = false;
+  if (event.kind) {
+    const wintryKinds = [
+      WeatherKind.FreezingRain,
+      WeatherKind.Sleet,
+      WeatherKind.Ice,
+      WeatherKind.IcePellets,
+      WeatherKind.SnowLight,
+      WeatherKind.SnowModerate,
+      WeatherKind.SnowHeavy,
+      WeatherKind.SnowShowers,
+      WeatherKind.Blizzard,
+    ];
+    if (wintryKinds.includes(event.kind)) {
+      isSnow = true;
+    }
+  }
+
+  if (!isSnow) {
+    const icon = (event.iconName || '').toLowerCase();
+    const desc = (event.description || '').toLowerCase();
+    if (
+      icon.includes('snow') ||
+      icon.includes('sleet') ||
+      icon.includes('ice') ||
+      icon.includes('blizzard') ||
+      desc.includes('snow') ||
+      desc.includes('sleet') ||
+      desc.includes('ice') ||
+      desc.includes('blizzard') ||
+      desc.includes('flurries')
+    ) {
+      isSnow = true;
+    }
+  }
+
+  return isSnow ? `Chance of snow ${prob}%` : `Chance of rain ${prob}%`;
+}
+
 /* ── Single hourly row ── */
 interface HourlyRowProps {
   event: WeatherTimelineEvent;
@@ -327,12 +380,16 @@ const HourlyRow: React.FC<HourlyRowProps> = ({ event, settings, tz, onShowWarnin
     dots.push({ node: nowPill, top: fraction, align: 'left', zIndex: 13 });
   }
 
+  const hourKey = `timeline-hour-row-${event.time.getFullYear()}-${event.time.getMonth()}-${event.time.getDate()}-${event.time.getHours()}`;
+  const precipSubtitle = getPrecipSubtitle(event);
+
   return (
     <div 
-      id={isNowHour ? 'timeline-event-now' : undefined}
+      id={hourKey}
       className="flex items-stretch border-b border-black/[0.04]" 
       style={rowStyle}
     >
+      {isNowHour && <span id="timeline-event-now" className="hidden" />}
       {/* Time */}
       <div className="w-12 shrink-0 flex items-center justify-end pr-2">
         <span className="text-[12px] sky-mono font-medium text-[color:var(--sky-dim)]">
@@ -350,21 +407,28 @@ const HourlyRow: React.FC<HourlyRowProps> = ({ event, settings, tz, onShowWarnin
           className="shrink-0 text-[color:var(--sky-muted)]"
         />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] whitespace-normal break-words leading-tight">
-              {event.description}
-            </span>
-            {event.warnings && event.warnings.length > 0 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onShowWarnings?.(event.warnings || []);
-                }}
-                className="text-red-500 hover:text-red-400 cursor-pointer focus:outline-none flex items-center justify-center p-0.5 rounded-full hover:bg-red-500/10 transition-colors shrink-0"
-                aria-label="Show warnings"
-              >
-                <AlertTriangle size={13} />
-              </button>
+          <div className="flex flex-col justify-center">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] whitespace-normal break-words leading-tight">
+                {event.description}
+              </span>
+              {event.warnings && event.warnings.length > 0 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShowWarnings?.(event.warnings || []);
+                  }}
+                  className="text-red-500 hover:text-red-400 cursor-pointer focus:outline-none flex items-center justify-center p-0.5 rounded-full hover:bg-red-500/10 transition-colors shrink-0"
+                  aria-label="Show warnings"
+                >
+                  <AlertTriangle size={13} />
+                </button>
+              )}
+            </div>
+            {precipSubtitle && (
+              <span className="text-[11px] sky-mono text-[color:var(--sky-dim)] mt-[2px] block">
+                {precipSubtitle}
+              </span>
             )}
           </div>
         </div>
@@ -391,7 +455,7 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWar
   const [activeEvent, setActiveEvent] = useState(first);
   const rowStyle = conditionRowStyle(maxPrecipEvent.iconName, maxPrecipEvent.description, maxPrecipEvent.precipProb, maxPrecipEvent.kind);
   const hasWarnings = events.some((e) => e.warnings && e.warnings.length > 0);
-  const showPrecip = (maxPrecipEvent.precipProb ?? 0) > 5;
+  const precipSubtitle = getPrecipSubtitle(maxPrecipEvent);
   const now = new Date();
   const isNowInFirstHour = first.time.getTime() <= now.getTime() && now.getTime() < first.time.getTime() + 3600_000;
 
@@ -406,7 +470,8 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWar
 
       let found = events[0];
       for (const evt of events) {
-        const el = document.getElementById(`hour-row-${evt.id}`);
+        const hourKey = `timeline-hour-row-${evt.time.getFullYear()}-${evt.time.getMonth()}-${evt.time.getDate()}-${evt.time.getHours()}`;
+        const el = document.getElementById(hourKey);
         if (!el) continue;
         const rect = el.getBoundingClientRect();
         if (rect.top <= targetY && rect.bottom >= targetY) {
@@ -471,9 +536,9 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWar
                     </button>
                   )}
                 </div>
-                {showPrecip && (
+                {precipSubtitle && (
                   <span className="text-[11px] sky-mono text-[color:var(--sky-dim)] mt-[2px] block">
-                    {maxPrecipEvent.precipProb}% chance of precip
+                    {precipSubtitle}
                   </span>
                 )}
               </div>
@@ -486,7 +551,7 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWar
       {events.map((evt, idx) => {
         const isFirst = idx === 0;
         const isNowHour = evt.time.getTime() <= now.getTime() && now.getTime() < evt.time.getTime() + 3600_000;
-        const showDot = isFirst && isNowHour;
+        const showDot = isNowHour;
         const elapsedMs = now.getTime() - evt.time.getTime();
         const fraction = showDot ? Math.max(0, Math.min(1, elapsedMs / 3600_000)) : undefined;
 
@@ -509,8 +574,11 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWar
           dots.push({ node: nowPill, top: fraction, align: 'left', zIndex: 13 });
         }
 
+        const hourKey = `timeline-hour-row-${evt.time.getFullYear()}-${evt.time.getMonth()}-${evt.time.getDate()}-${evt.time.getHours()}`;
+
         return (
-          <div key={evt.id} id={`hour-row-${evt.id}`} className="flex items-stretch">
+          <div key={evt.id} id={hourKey} className="flex items-stretch">
+            {isNowHour && <span id="timeline-event-now" className="hidden" />}
             <div className="w-12 shrink-0 flex items-center justify-end pr-2">
               <span className="text-[12px] sky-mono font-medium text-[color:var(--sky-dim)]">
                 {formatTimeAtLocation(evt.time, '24h', tz)}
