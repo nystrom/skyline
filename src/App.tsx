@@ -293,11 +293,11 @@ export default function App() {
       setWeatherData(result.data);
       setLastLiveData(result.data);
       lastLiveRef.current = result.data;
-      const locationChanged = location.id !== settings.activeLocation?.id;
+      const locationChanged = !settings.activeLocation || location.id !== settings.activeLocation.id;
       if (locationChanged) {
         updateSettings({ activeLocation: location, city: location.label });
-        scrollToNowAfterRender.current = true;
       }
+      scrollToNowAfterRender.current = true;
       setDataSource(result.source === 'cached' ? 'cached' : 'live');
       setFetchWarnings(result.warnings);
       setActiveDayIdx(0);
