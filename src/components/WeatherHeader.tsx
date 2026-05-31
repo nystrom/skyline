@@ -188,9 +188,10 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
     const today = weatherData.daily[0];
     const now = new Date();
     const isCurrentlyRaining = current.iconName.includes('rain') || current.precipProb >= 60;
+    const accum = convertPrecipAccum(current.precipAccum ?? 0, settings.tempUnit);
 
     if (isCurrentlyRaining) {
-      return { label: 'RAIN NOW', value: `${current.precipProb}%` };
+      return { label: 'RAIN NOW', value: `${current.precipProb}% (${accum})` };
     }
 
     if (today) {
@@ -201,19 +202,11 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
 
       if (upcoming) {
         const timeStr = formatTimeAtLocation(upcoming.time, '24h', tz);
-        return { label: `RAIN BY ${timeStr}`, value: `${upcoming.precipProb ?? 0}%` };
+        return { label: `RAIN BY ${timeStr}`, value: `${upcoming.precipProb ?? 0}% (${accum})` };
       }
     }
 
-    return { label: 'PRECIPITATION', value: `${current.precipProb}%` };
-  };
-
-  const precipAccumChip = (): { label: string; value: string } => {
-    const value = convertPrecipAccum(current.precipAccum ?? 0, settings.tempUnit);
-    return {
-      label: 'ACCUMULATION',
-      value,
-    };
+    return { label: 'PRECIPITATION', value: `${current.precipProb}% (${accum})` };
   };
 
   const windChip = (): { label: string; value: string } => {
@@ -238,7 +231,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
     return `${desc}. ${cap(upcoming)}`;
   };
 
-  const chips = [rainChip(), precipAccumChip(), humidityChip(), windChip()];
+  const chips = [rainChip(), humidityChip(), windChip()];
 
   const headerStyle = conditionCardStyle(current.iconName, current.description, current.kind);
 
