@@ -224,7 +224,7 @@ export const TimelineMarkerCard: React.FC<TimelineMarkerCardProps> = ({
           {/* Left part: Icon + condition label (sky-wash style) */}
           <div className="flex-1 flex items-center gap-2 min-w-0 h-full py-1">
             <div className="p-1 rounded-none text-[color:var(--sky-muted)] shrink-0">
-              <WeatherIcon name={event.iconName} size={16} />
+              <WeatherIcon name={event.iconName} size={28} />
             </div>
             <div className="min-w-0 flex flex-col justify-center">
               <span className="text-[13px] font-extrabold text-[color:var(--sky-fg)] whitespace-normal break-words leading-tight w-full">

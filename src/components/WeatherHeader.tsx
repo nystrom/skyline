@@ -65,7 +65,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
     const isRainy = (iconName: string, precipProb?: number) =>
       iconName.includes('rain') || (precipProb ?? 0) >= 60;
     const isSnowy = (iconName: string) => iconName.includes('snow');
-    const isStormy = (iconName: string) => iconName.includes('lightning');
+    const isStormy = (iconName: string) => iconName.includes('lightning') || iconName.includes('thunder');
     const isHighWind = (windSpeed?: number) => (windSpeed ?? 0) >= 12;
 
     const labelFor = (iconName: string, precipProb?: number, windSpeed?: number): string | null => {
@@ -511,7 +511,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
           {convertTemp(current.temp, settings.tempUnit)}°
         </div>
         <div className="pb-3 flex items-center gap-2">
-          <WeatherIcon name={current.iconName} size={46} className="text-amber-400" />
+          <WeatherIcon name={current.iconName} size={64} className="text-amber-400" />
           {current.warnings && current.warnings.length > 0 && (
             <button
               onClick={(e) => {

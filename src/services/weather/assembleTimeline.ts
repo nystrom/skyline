@@ -125,26 +125,7 @@ export function assembleTimelineAndForecasts(
     }
 
 
-    if (dIdx === 0) {
-      const liveNow = new Date();
-      timelineEvents.push({
-        id: 'event-0-now',
-        time: liveNow,
-        hourLabel: formatTime24AtLocation(liveNow, tz),
-        type: 'now',
-        title: 'Now',
-        description: currentConditions?.description ?? 'Current conditions',
-        iconName: currentConditions?.iconName ?? 'locate',
-        temp: Math.round(currentTemp),
-        windSpeed: currentConditions?.windSpeed,
-        windDeg: currentConditions?.windDeg,
-        precipProb: currentConditions?.precipProb,
-        humidity: currentConditions?.humidity,
-        colorTheme: 'blue',
-        isSpecial: true,
-        warnings: currentConditions?.warnings,
-      });
-    }
+
 
     timelineEvents.sort((a, b) => a.time.getTime() - b.time.getTime());
 

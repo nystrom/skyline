@@ -125,7 +125,7 @@ export function conditionTintKind(iconName: string | undefined | null, descripti
   if (desc.includes('sand') || desc.includes('dust') || desc.includes('sahara')) return 'sand';
   if (desc.includes('fog') || desc.includes('mist') || desc.includes('haze') || desc.includes('smoke')) return 'fog';
 
-  if (icon.includes('lightning') || icon.includes('bolt') || icon.includes('storm') || icon.includes('ts')) return 'storm';
+  if (icon.includes('lightning') || icon.includes('bolt') || icon.includes('thunder') || icon.includes('storm') || icon.includes('hurricane') || icon.includes('tornado') || icon.includes('ts')) return 'storm';
   if (icon.includes('snow') || icon.includes('sleet') || icon.includes('ice') || icon.includes('hail') || icon.includes('snowflake'))
     return 'snow';
   if (icon.includes('rain') || icon.includes('drizzle') || icon.includes('shower')) return 'rain';

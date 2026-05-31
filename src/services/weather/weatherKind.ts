@@ -294,58 +294,13 @@ export function nwsUrlToKind(url: string): WeatherKind {
   return WeatherKind.Unknown;
 }
 
-/** Map a WeatherKind to a Lucide icon name. */
+/**
+ * Map a WeatherKind to a WK icon name.
+ * Returns '{kind}_day' or '{kind}_night' — parsed by WeatherIcon to select
+ * the correct custom SVG and day/night variant.
+ */
 export function weatherKindToIcon(kind: WeatherKind, isDay: boolean): string {
-  switch (kind) {
-    case WeatherKind.Clear:
-      return isDay ? 'sun' : 'moon';
-    case WeatherKind.ScatteredClouds:
-    case WeatherKind.PartlyCloudy:
-    case WeatherKind.MostlyCloudy:
-    case WeatherKind.Overcast:
-    case WeatherKind.Fog:
-      return 'cloud';
-    case WeatherKind.Drizzle:
-      return 'cloud-drizzle';
-    case WeatherKind.RainLight:
-    case WeatherKind.RainModerate:
-    case WeatherKind.RainHeavy:
-    case WeatherKind.Showers:
-      return 'cloud-rain';
-    case WeatherKind.FreezingRain:
-    case WeatherKind.SnowLight:
-    case WeatherKind.SnowModerate:
-    case WeatherKind.SnowHeavy:
-    case WeatherKind.SnowShowers:
-    case WeatherKind.Sleet:
-    case WeatherKind.Ice:
-    case WeatherKind.Blizzard:
-    case WeatherKind.IcePellets:
-      return 'snowflake';
-    case WeatherKind.Thunderstorm:
-    case WeatherKind.ThunderstormHail:
-      return 'cloud-lightning';
-    case WeatherKind.Sand:
-      return 'wind';
-    case WeatherKind.Hazy:
-      return 'haze';
-    case WeatherKind.Mist:
-      return 'mist';
-    case WeatherKind.Unknown:
-      return 'unknown';
-    case WeatherKind.Smoke:
-      return 'haze';
-    case WeatherKind.Wind:
-      return 'wind';
-    case WeatherKind.Hurricane:
-      return 'wind';
-    case WeatherKind.Tornado:
-      return 'tornado';
-    case WeatherKind.Hot:
-      return 'flame';
-    case WeatherKind.Cold:
-      return 'snowflake';
-  }
+  return `${kind}_${isDay ? 'day' : 'night'}`;
 }
 
 /** Short human-readable label for a WeatherKind. */

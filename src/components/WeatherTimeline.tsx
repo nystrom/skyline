@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Flame, Sunrise, Sunset, Moon, Wind, AlertTriangle } from 'lucide-react';
 import { DailyForecast, UserSettings, WeatherTimelineEvent, WeatherWarning } from '../types';
 import { WeatherIcon } from './WeatherIcon';
@@ -69,13 +69,7 @@ function groupHourly(events: WeatherTimelineEvent[]): GroupedItem[] {
   };
 
   for (const evt of events) {
-    if (evt.type !== 'hourly_status' && evt.type !== 'now') {
-      flushRun();
-      result.push({ type: 'single', events: [evt] });
-      continue;
-    }
-    // 'now' is always its own instantaneous marker
-    if (evt.type === 'now') {
+    if (evt.type !== 'hourly_status') {
       flushRun();
       result.push({ type: 'single', events: [evt] });
       continue;
@@ -97,19 +91,10 @@ function groupHourly(events: WeatherTimelineEvent[]): GroupedItem[] {
   return result;
 }
 
-const INSTANT_TYPES = new Set(['now', 'sunrise', 'sunset', 'moonrise', 'moonset', 'peak_temp', 'wind_shift']);
+const INSTANT_TYPES = new Set(['sunrise', 'sunset', 'moonrise', 'moonset', 'peak_temp', 'wind_shift']);
 
 function instantTheme(type: string) {
   switch (type) {
-    case 'now':
-      return {
-        dot: 'bg-blue-500',
-        ring: 'ring-blue-200 dark:ring-blue-900/60',
-        connector: 'bg-blue-200 dark:bg-blue-800/60',
-        time: 'text-blue-500 dark:text-blue-400',
-        pill: 'bg-blue-50/90 dark:bg-blue-950/60 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200',
-        icon: 'text-blue-500 dark:text-blue-400',
-      };
     case 'sunrise':
       return {
         dot: 'bg-orange-400',
@@ -182,16 +167,107 @@ function instantTheme(type: string) {
 
 /* ── Shared line column ── */
 interface LineColProps {
-  dot?: React.ReactNode;
+  dots?: Array<{
+    node: React.ReactNode;
+    top: number;
+    align?: 'center' | 'left' | 'right';
+    zIndex?: number;
+  }>;
 }
 
-const LineCol: React.FC<LineColProps> = ({ dot }) => (
-  <div className="w-5 shrink-0 relative flex justify-center items-center self-stretch">
+const LineCol: React.FC<LineColProps> = ({ dots = [] }) => (
+  <div className="w-5 shrink-0 relative flex justify-center self-stretch">
     {/* Continuous vertical line */}
     <div className="absolute top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-700/50 left-1/2 -translate-x-1/2" />
-    {dot && <div className="relative z-10">{dot}</div>}
+    {dots.map((d, idx) => {
+      const tx = d.align === 'left' ? '-100%' : d.align === 'right' ? '0%' : '-50%';
+      return (
+        <div 
+          key={idx}
+          className="absolute left-1/2"
+          style={{ 
+            top: `${d.top * 100}%`, 
+            transform: `translate(${tx}, -50%)`,
+            zIndex: d.zIndex ?? 10
+          }}
+        >
+          {d.node}
+        </div>
+      );
+    })}
   </div>
 );
+
+function getSpecialOverlayDots(
+  startTime: Date,
+  endTime: Date,
+  specialEvents: WeatherTimelineEvent[],
+  settings: UserSettings,
+  tz: TZ,
+): Array<{ node: React.ReactNode; top: number; align: 'left' | 'right' | 'center'; zIndex?: number }> {
+  const startMs = startTime.getTime();
+  const endMs = endTime.getTime();
+  const duration = endMs - startMs;
+
+  const hourSpecials = specialEvents.filter((evt) => {
+    if (evt.time.getTime() < startMs || evt.time.getTime() >= endMs) return false;
+    if (evt.type === 'sunrise' || evt.type === 'sunset') {
+      return settings.showSunriseSunset;
+    }
+    if (evt.type === 'moonrise' || evt.type === 'moonset') {
+      return settings.showMoonriseMoonset;
+    }
+    return false;
+  });
+
+  return hourSpecials.map((evt) => {
+    const elapsedMs = evt.time.getTime() - startMs;
+    const fraction = duration > 0 ? Math.max(0, Math.min(1, elapsedMs / duration)) : 0.5;
+    const displayTime = formatTimeAtLocation(evt.time, settings.clockFormat, tz);
+
+    let pillStyle: React.CSSProperties = {};
+    let tipStyle: React.CSSProperties = {};
+    let labelText = '';
+
+    if (evt.type === 'sunrise') {
+      pillStyle = { background: 'linear-gradient(to right, #818cf8, #fb923c, #fcd34d)' };
+      tipStyle = { backgroundColor: '#fcd34d' };
+      labelText = 'SUNRISE';
+    } else if (evt.type === 'sunset') {
+      pillStyle = { background: 'linear-gradient(to right, #fb923c, #e879a0, #a855f7)' };
+      tipStyle = { backgroundColor: '#a855f7' };
+      labelText = 'SUNSET';
+    } else if (evt.type === 'moonrise') {
+      pillStyle = { background: 'linear-gradient(to right, #4c1d95, #8b5cf6)' };
+      tipStyle = { backgroundColor: '#8b5cf6' };
+      labelText = 'MOONRISE';
+    } else if (evt.type === 'moonset') {
+      pillStyle = { background: 'linear-gradient(to right, #8b5cf6, #4c1d95)' };
+      tipStyle = { backgroundColor: '#4c1d95' };
+      labelText = 'MOONSET';
+    }
+
+    const node = (
+      <div className="relative flex items-center" style={{ paddingRight: '11px' }}>
+        <div 
+          className="text-white pl-1.5 pr-1 py-[3px] rounded-l-md text-[8px] font-extrabold font-mono tracking-tight shadow-sm uppercase shrink-0 whitespace-nowrap flex flex-col items-center justify-center leading-none h-[22px] z-10 relative"
+          style={pillStyle}
+        >
+          <span>{labelText}</span>
+          <span className="mt-[1.5px]">{displayTime}</span>
+        </div>
+        <div 
+          className="absolute rotate-45 rounded-tr-[3px] z-0" 
+          style={{ right: '3.22px', width: '15.56px', height: '15.56px', ...tipStyle }} 
+        />
+      </div>
+    );
+
+    const zIndex = (evt.type === 'sunrise' || evt.type === 'sunset') ? 12 : 11;
+
+    return { node, top: fraction, align: 'left', zIndex };
+  });
+}
 
 /* ── Wind + temp block ── */
 const WindTemp: React.FC<{ event: WeatherTimelineEvent; settings: UserSettings }> = ({ event, settings }) => (
@@ -215,13 +291,41 @@ interface HourlyRowProps {
   settings: UserSettings;
   tz: TZ;
   onShowWarnings?: (warnings: WeatherWarning[]) => void;
+  specialEvents: WeatherTimelineEvent[];
 }
 
-const HourlyRow: React.FC<HourlyRowProps> = ({ event, settings, tz, onShowWarnings }) => {
+const HourlyRow: React.FC<HourlyRowProps> = ({ event, settings, tz, onShowWarnings, specialEvents }) => {
   const rowStyle = conditionRowStyle(event.iconName, event.description, event.precipProb, event.kind);
+  const now = new Date();
+  const isNowHour = event.time.getTime() <= now.getTime() && now.getTime() < event.time.getTime() + 3600_000;
+  const elapsedMs = now.getTime() - event.time.getTime();
+  const fraction = Math.max(0, Math.min(1, elapsedMs / 3600_000));
+  
+  const dots: Array<{ node: React.ReactNode; top: number; align?: 'left' | 'right' | 'center'; zIndex?: number }> = [];
+
+  // Add rise/set overlays if any fall within this hour
+  const riseSetDots = getSpecialOverlayDots(event.time, new Date(event.time.getTime() + 3600_000), specialEvents, settings, tz);
+  dots.push(...riseSetDots);
+
+  if (isNowHour) {
+    const nowPill = (
+      <div className="relative flex items-center" style={{ paddingRight: '11px' }}>
+        <div className="bg-blue-500 dark:bg-blue-600 text-white pl-1.5 pr-1 py-[3px] rounded-l-md text-[8px] font-extrabold font-mono tracking-tight shadow-sm uppercase shrink-0 whitespace-nowrap flex flex-col items-center justify-center leading-none h-[22px] z-10 relative">
+          <span>NOW</span>
+          <span className="mt-[1.5px]">{formatTimeAtLocation(now, settings.clockFormat, tz)}</span>
+        </div>
+        <div className="absolute rotate-45 rounded-tr-[3px] bg-blue-500 dark:bg-blue-600 z-0" style={{ right: '3.22px', width: '15.56px', height: '15.56px' }} />
+      </div>
+    );
+    dots.push({ node: nowPill, top: fraction, align: 'left', zIndex: 13 });
+  }
 
   return (
-    <div className="flex items-stretch border-b border-black/[0.04]" style={rowStyle}>
+    <div 
+      id={isNowHour ? 'timeline-event-now' : undefined}
+      className="flex items-stretch border-b border-black/[0.04]" 
+      style={rowStyle}
+    >
       {/* Time */}
       <div className="w-12 shrink-0 flex items-center justify-end pr-2">
         <span className="text-[12px] sky-mono font-medium text-[color:var(--sky-dim)]">
@@ -229,17 +333,17 @@ const HourlyRow: React.FC<HourlyRowProps> = ({ event, settings, tz, onShowWarnin
         </span>
       </div>
 
-      <LineCol />
+      <LineCol dots={dots} />
 
       {/* Content */}
       <div className="flex-1 min-w-0 flex items-center py-[11px] pr-4 gap-3">
         <WeatherIcon
           name={event.iconName}
-          size={15}
+          size={28}
           className="shrink-0 text-[color:var(--sky-muted)]"
         />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] whitespace-normal break-words leading-tight">
               {event.description}
             </span>
@@ -268,16 +372,23 @@ interface MergedCardProps {
   settings: UserSettings;
   tz: TZ;
   onShowWarnings?: (warnings: WeatherWarning[]) => void;
+  specialEvents: WeatherTimelineEvent[];
 }
 
-const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWarnings }) => {
+const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWarnings, specialEvents }) => {
   const first = events[0];
   const rowStyle = conditionRowStyle(first.iconName, first.description, first.precipProb, first.kind);
   const hasWarnings = events.some((e) => e.warnings && e.warnings.length > 0);
   const showPrecip = (first.precipProb ?? 0) > 5;
+  const now = new Date();
+  const isNowInFirstHour = first.time.getTime() <= now.getTime() && now.getTime() < first.time.getTime() + 3600_000;
 
   return (
-    <div className="border-b border-black/[0.04] relative" style={rowStyle}>
+    <div
+      id={isNowInFirstHour ? 'timeline-event-now' : undefined}
+      className="border-b border-black/[0.04] relative"
+      style={rowStyle}
+    >
       {/* Absolute sticky container pins the condition relative to the entire card's height,
           allowing the individual times and temperatures to scroll naturally. */}
       <div className="absolute inset-y-0 left-[4.25rem] right-0 pointer-events-none z-10">
@@ -288,12 +399,12 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWar
           <div className="flex items-center py-[11px] pr-4 gap-3 pointer-events-auto max-w-[calc(100%-80px)]">
             <WeatherIcon
               name={first.iconName}
-              size={15}
+              size={28}
               className="shrink-0 text-[color:var(--sky-muted)]"
             />
             <div className="flex-1 min-w-0">
               <div className="flex flex-col justify-center">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] whitespace-normal break-words leading-tight">
                     {first.description}
                   </span>
@@ -333,21 +444,48 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWar
       </div>
 
       {/* Render rows with empty space in the middle to receive the overlay */}
-      {events.map((evt) => (
-        <div key={evt.id} className="flex items-stretch">
-          <div className="w-12 shrink-0 flex items-center justify-end pr-2">
-            <span className="text-[12px] sky-mono font-medium text-[color:var(--sky-dim)]">
-              {formatTimeAtLocation(evt.time, '24h', tz)}
-            </span>
+      {events.map((evt, idx) => {
+        const isFirst = idx === 0;
+        const isNowHour = evt.time.getTime() <= now.getTime() && now.getTime() < evt.time.getTime() + 3600_000;
+        const showDot = isFirst && isNowHour;
+        const elapsedMs = now.getTime() - evt.time.getTime();
+        const fraction = showDot ? Math.max(0, Math.min(1, elapsedMs / 3600_000)) : undefined;
+
+        const dots: Array<{ node: React.ReactNode; top: number; align?: 'left' | 'right' | 'center'; zIndex?: number }> = [];
+
+        // Add rise/set overlays if any fall within this hour
+        const riseSetDots = getSpecialOverlayDots(evt.time, new Date(evt.time.getTime() + 3600_000), specialEvents, settings, tz);
+        dots.push(...riseSetDots);
+
+        if (showDot && fraction !== undefined) {
+          const nowPill = (
+            <div className="relative flex items-center" style={{ paddingRight: '11px' }}>
+              <div className="bg-blue-500 dark:bg-blue-600 text-white pl-1.5 pr-1 py-[3px] rounded-l-md text-[8px] font-extrabold font-mono tracking-tight shadow-sm uppercase shrink-0 whitespace-nowrap flex flex-col items-center justify-center leading-none h-[22px] z-10 relative">
+                <span>NOW</span>
+                <span className="mt-[1.5px]">{formatTimeAtLocation(now, settings.clockFormat, tz)}</span>
+              </div>
+              <div className="absolute rotate-45 rounded-tr-[3px] bg-blue-500 dark:bg-blue-600 z-0" style={{ right: '3.22px', width: '15.56px', height: '15.56px' }} />
+            </div>
+          );
+          dots.push({ node: nowPill, top: fraction, align: 'left', zIndex: 13 });
+        }
+
+        return (
+          <div key={evt.id} className="flex items-stretch">
+            <div className="w-12 shrink-0 flex items-center justify-end pr-2">
+              <span className="text-[12px] sky-mono font-medium text-[color:var(--sky-dim)]">
+                {formatTimeAtLocation(evt.time, '24h', tz)}
+              </span>
+            </div>
+            <LineCol dots={dots} />
+            <div className="flex-1 min-w-0 flex items-center py-[11px] pr-4 gap-3">
+              <span className="w-[15px] shrink-0" />
+              <div className="flex-1 min-w-0" />
+              <WindTemp event={evt} settings={settings} />
+            </div>
           </div>
-          <LineCol />
-          <div className="flex-1 min-w-0 flex items-center py-[11px] pr-4 gap-3">
-            <span className="w-[15px] shrink-0" />
-            <div className="flex-1 min-w-0" />
-            <WindTemp event={evt} settings={settings} />
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
@@ -362,17 +500,7 @@ interface InstantRowProps {
 
 const InstantRow: React.FC<InstantRowProps> = ({ event, settings, tz, rowStyle }) => {
   const theme = instantTheme(event.type);
-  const [nowTick, setNowTick] = useState(() => new Date());
-
-  useEffect(() => {
-    if (event.type !== 'now') return;
-    const id = window.setInterval(() => setNowTick(new Date()), 1000);
-    return () => window.clearInterval(id);
-  }, [event.type]);
-
-  const displayTime = event.type === 'now'
-    ? formatTimeAtLocation(nowTick, settings.clockFormat, tz)
-    : formatTimeAtLocation(event.time, settings.clockFormat, tz);
+  const displayTime = formatTimeAtLocation(event.time, settings.clockFormat, tz);
 
   const dot = (
     <div className={`w-2.5 h-2.5 rounded-full ring-2 ${theme.dot} ${theme.ring}`} />
@@ -380,7 +508,7 @@ const InstantRow: React.FC<InstantRowProps> = ({ event, settings, tz, rowStyle }
 
   return (
     <div
-      id={event.type === 'now' ? 'timeline-event-now' : `timeline-instant-${event.id}`}
+      id={`timeline-instant-${event.id}`}
       className="flex items-center py-[5px] border-b border-black/[0.04]"
       style={rowStyle}
     >
@@ -392,50 +520,17 @@ const InstantRow: React.FC<InstantRowProps> = ({ event, settings, tz, rowStyle }
       </div>
 
       {/* Line col with colored dot */}
-      <LineCol dot={dot} />
+      <LineCol dots={[{ node: dot, top: 0.5, align: 'center' }]} />
 
       {/* Horizontal connector + pill */}
       <div className="flex-1 pr-4 flex items-center gap-0">
         <div className={`h-px w-3 shrink-0 ${theme.connector}`} />
         <div className={`flex items-center gap-1.5 px-2.5 py-[4px] rounded-full text-[11px] font-bold border shrink-0 ${theme.pill}`} style={'pillStyle' in theme ? theme.pillStyle : undefined}>
-          {event.type === 'sunrise' && (
-            <>
-              <Sunrise size={10} className={theme.icon} />
-              <span className="uppercase tracking-wide">Sunrise</span>
-            </>
-          )}
-          {event.type === 'sunset' && (
-            <>
-              <Sunset size={10} className={theme.icon} />
-              <span className="uppercase tracking-wide">Sunset</span>
-            </>
-          )}
-          {event.type === 'moonrise' && (
-            <>
-              <Moon size={10} className={theme.icon} />
-              <span className="uppercase tracking-wide">Moonrise</span>
-            </>
-          )}
-          {event.type === 'moonset' && (
-            <>
-              <Moon size={10} className={theme.icon} />
-              <span className="uppercase tracking-wide">Moonset</span>
-            </>
-          )}
           {event.type === 'peak_temp' && (
             <>
               <Flame size={10} className={theme.icon} />
               <span className="uppercase tracking-wide">High</span>
               <span>{convertTemp(event.tempMax ?? event.temp ?? 0, settings.tempUnit)}°</span>
-            </>
-          )}
-          {event.type === 'now' && (
-            <>
-              <WeatherIcon name="locate" size={10} className={theme.icon} />
-              <span className="uppercase tracking-wide">Now</span>
-              <span className="font-normal opacity-70 text-[10px]">·</span>
-              <span className="font-normal">{event.description}</span>
-              <span className="font-bold">{convertTemp(event.temp ?? 0, settings.tempUnit)}°</span>
             </>
           )}
           {event.type === 'wind_shift' && (
@@ -521,9 +616,15 @@ export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
 
             <div className={`transition-opacity duration-300 ${isSelectedDay ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}>
               {(() => {
+                const specialEvents = day.timelineEvents.filter((e) => ['sunrise', 'sunset', 'moonrise', 'moonset'].includes(e.type));
                 let lastHourlyEvent = day.timelineEvents.find((e) => e.type === 'hourly_status');
+
                 return items.map((item) => {
                   const evt = item.events[0];
+
+                  if (['sunrise', 'sunset', 'moonrise', 'moonset', 'peak_temp'].includes(evt.type)) {
+                    return null;
+                  }
 
                   if (item.type === 'merged') {
                     lastHourlyEvent = item.events[item.events.length - 1];
@@ -534,6 +635,7 @@ export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
                         settings={settings}
                         tz={tz}
                         onShowWarnings={onShowWarnings}
+                        specialEvents={specialEvents}
                       />
                     );
                   }
@@ -547,18 +649,12 @@ export const WeatherTimeline: React.FC<WeatherTimelineProps> = ({
                         settings={settings}
                         tz={tz}
                         onShowWarnings={onShowWarnings}
+                        specialEvents={specialEvents}
                       />
                     );
                   }
 
                   if (INSTANT_TYPES.has(evt.type)) {
-                    if (evt.type === 'sunrise' || evt.type === 'sunset') {
-                      if (!settings.showSunriseSunset) return null;
-                    }
-                    if (evt.type === 'moonrise' || evt.type === 'moonset') {
-                      if (!settings.showMoonriseMoonset) return null;
-                    }
-
                     const rowStyle = lastHourlyEvent
                       ? conditionRowStyle(
                           lastHourlyEvent.iconName,
