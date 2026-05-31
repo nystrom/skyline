@@ -355,14 +355,9 @@ function enrichDailyFromHourly(
     const dayHours = hourly.filter((h) => formatDayKeyAtLocation(h.time, tzOpts) === key);
     const precipAccum = dayHours.reduce((sum, h) => sum + h.precipAccum, 0);
     const peakTempTime = computePeakTempTime(dayHours);
-
-    let tempMin = day.tempMin;
-    let tempMax = day.tempMax;
-    const observedTemps = dayHours.filter((h) => !h.interpolated).map((h) => h.temp);
-    if (observedTemps.length > 0) {
-      if (!Number.isFinite(tempMin)) tempMin = Math.min(...observedTemps);
-      if (!Number.isFinite(tempMax)) tempMax = Math.max(...observedTemps);
-    }
+    const dayTemps = dayHours.map((h) => h.temp);
+    const tempMin = dayTemps.length > 0 ? Math.min(...dayTemps) : day.tempMin;
+    const tempMax = dayTemps.length > 0 ? Math.max(...dayTemps) : day.tempMax;
 
     const description = getNormalizedDescription(day.kind, day.precipProb);
 
