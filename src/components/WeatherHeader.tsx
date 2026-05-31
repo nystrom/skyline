@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   convertTemp,
   convertWindSpeed,
+  convertPrecipAccum,
   formatTimeAtLocation,
   formatTime24AtLocation,
 } from '../utils/unitConverter';
@@ -207,6 +208,14 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
     return { label: 'PRECIPITATION', value: `${current.precipProb}%` };
   };
 
+  const precipAccumChip = (): { label: string; value: string } => {
+    const value = convertPrecipAccum(current.precipAccum ?? 0, settings.tempUnit);
+    return {
+      label: 'ACCUMULATION',
+      value,
+    };
+  };
+
   const windChip = (): { label: string; value: string } => {
     const compass = windDegToCompass(current.windDeg);
     const speed = convertWindSpeed(current.windSpeed, settings.windSpeedUnit);
@@ -229,7 +238,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
     return `${desc}. ${cap(upcoming)}`;
   };
 
-  const chips = [rainChip(), humidityChip(), windChip()];
+  const chips = [rainChip(), precipAccumChip(), humidityChip(), windChip()];
 
   const headerStyle = conditionCardStyle(current.iconName, current.description, current.kind);
 
