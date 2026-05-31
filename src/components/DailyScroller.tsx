@@ -149,7 +149,7 @@ export const DailyScroller: React.FC<DailyScrollerProps> = ({
               </span>
               <WeatherIcon
                 name={day.iconName}
-                size={15}
+                size={22}
                 className="text-[color:var(--sky-muted)]"
               />
               <div className="flex items-baseline gap-[3px] text-[11px] sky-mono">

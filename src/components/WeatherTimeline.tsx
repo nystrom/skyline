@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Flame, Sunrise, Sunset, Moon, Wind, AlertTriangle } from 'lucide-react';
 import { DailyForecast, UserSettings, WeatherTimelineEvent, WeatherWarning } from '../types';
 import { WeatherIcon } from './WeatherIcon';
@@ -58,6 +58,10 @@ interface GroupedItem {
   events: WeatherTimelineEvent[];
 }
 
+function getBaseDescription(desc: string): string {
+  return desc.replace(/\s+\d+%\s*$/, '').trim().toLowerCase();
+}
+
 function groupHourly(events: WeatherTimelineEvent[]): GroupedItem[] {
   const result: GroupedItem[] = [];
   let run: WeatherTimelineEvent[] = [];
@@ -70,6 +74,9 @@ function groupHourly(events: WeatherTimelineEvent[]): GroupedItem[] {
 
   for (const evt of events) {
     if (evt.type !== 'hourly_status') {
+      if (['sunrise', 'sunset', 'moonrise', 'moonset', 'peak_temp'].includes(evt.type)) {
+        continue;
+      }
       flushRun();
       result.push({ type: 'single', events: [evt] });
       continue;
@@ -77,7 +84,7 @@ function groupHourly(events: WeatherTimelineEvent[]): GroupedItem[] {
     if (run.length === 0) {
       run.push(evt);
     } else {
-      const same = run[0].description.trim().toLowerCase() === evt.description.trim().toLowerCase();
+      const same = getBaseDescription(run[0].description) === getBaseDescription(evt.description);
       if (same) {
         run.push(evt);
       } else {
@@ -257,7 +264,7 @@ function getSpecialOverlayDots(
           <span className="mt-[1.5px]">{displayTime}</span>
         </div>
         <div 
-          className="absolute rotate-45 rounded-tr-[3px] z-0" 
+          className="absolute rotate-45 rounded-tr-[0.5px] z-0" 
           style={{ right: '3.22px', width: '15.56px', height: '15.56px', ...tipStyle }} 
         />
       </div>
@@ -314,7 +321,7 @@ const HourlyRow: React.FC<HourlyRowProps> = ({ event, settings, tz, onShowWarnin
           <span>NOW</span>
           <span className="mt-[1.5px]">{formatTimeAtLocation(now, settings.clockFormat, tz)}</span>
         </div>
-        <div className="absolute rotate-45 rounded-tr-[3px] bg-blue-500 dark:bg-blue-600 z-0" style={{ right: '3.22px', width: '15.56px', height: '15.56px' }} />
+        <div className="absolute rotate-45 rounded-tr-[0.5px] bg-blue-500 dark:bg-blue-600 z-0" style={{ right: '3.22px', width: '15.56px', height: '15.56px' }} />
       </div>
     );
     dots.push({ node: nowPill, top: fraction, align: 'left', zIndex: 13 });
@@ -377,11 +384,43 @@ interface MergedCardProps {
 
 const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWarnings, specialEvents }) => {
   const first = events[0];
-  const rowStyle = conditionRowStyle(first.iconName, first.description, first.precipProb, first.kind);
+  const maxPrecipEvent = events.reduce((max, curr) => 
+    (curr.precipProb ?? 0) > (max.precipProb ?? 0) ? curr : max
+  , events[0]);
+
+  const [activeEvent, setActiveEvent] = useState(first);
+  const rowStyle = conditionRowStyle(maxPrecipEvent.iconName, maxPrecipEvent.description, maxPrecipEvent.precipProb, maxPrecipEvent.kind);
   const hasWarnings = events.some((e) => e.warnings && e.warnings.length > 0);
-  const showPrecip = (first.precipProb ?? 0) > 5;
+  const showPrecip = (maxPrecipEvent.precipProb ?? 0) > 5;
   const now = new Date();
   const isNowInFirstHour = first.time.getTime() <= now.getTime() && now.getTime() < first.time.getTime() + 3600_000;
+
+  useEffect(() => {
+    const container = document.getElementById('weather-timeline-container');
+    if (!container) return;
+
+    const updateActiveIcon = () => {
+      const containerRect = container.getBoundingClientRect();
+      const pinnedHeight = readTopStackHeight(container);
+      const targetY = containerRect.top + pinnedHeight + 29 + 6 + 14;
+
+      let found = events[0];
+      for (const evt of events) {
+        const el = document.getElementById(`hour-row-${evt.id}`);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.top <= targetY && rect.bottom >= targetY) {
+          found = evt;
+          break;
+        }
+      }
+      setActiveEvent(found);
+    };
+
+    updateActiveIcon();
+    container.addEventListener('scroll', updateActiveIcon, { passive: true });
+    return () => container.removeEventListener('scroll', updateActiveIcon);
+  }, [events]);
 
   return (
     <div
@@ -398,7 +437,7 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWar
         >
           <div className="flex items-center py-[11px] pr-4 gap-3 pointer-events-auto max-w-[calc(100%-80px)]">
             <WeatherIcon
-              name={first.iconName}
+              name={activeEvent.iconName}
               size={28}
               className="shrink-0 text-[color:var(--sky-muted)]"
             />
@@ -406,7 +445,7 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWar
               <div className="flex flex-col justify-center">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-[13px] font-semibold text-[color:var(--sky-fg)] whitespace-normal break-words leading-tight">
-                    {first.description}
+                    {maxPrecipEvent.description}
                   </span>
                   {hasWarnings && (
                     <button
@@ -434,7 +473,7 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWar
                 </div>
                 {showPrecip && (
                   <span className="text-[11px] sky-mono text-[color:var(--sky-dim)] mt-[2px] block">
-                    {first.precipProb}% chance of precip
+                    {maxPrecipEvent.precipProb}% chance of precip
                   </span>
                 )}
               </div>
@@ -464,14 +503,14 @@ const MergedCard: React.FC<MergedCardProps> = ({ events, settings, tz, onShowWar
                 <span>NOW</span>
                 <span className="mt-[1.5px]">{formatTimeAtLocation(now, settings.clockFormat, tz)}</span>
               </div>
-              <div className="absolute rotate-45 rounded-tr-[3px] bg-blue-500 dark:bg-blue-600 z-0" style={{ right: '3.22px', width: '15.56px', height: '15.56px' }} />
+              <div className="absolute rotate-45 rounded-tr-[0.5px] bg-blue-500 dark:bg-blue-600 z-0" style={{ right: '3.22px', width: '15.56px', height: '15.56px' }} />
             </div>
           );
           dots.push({ node: nowPill, top: fraction, align: 'left', zIndex: 13 });
         }
 
         return (
-          <div key={evt.id} className="flex items-stretch">
+          <div key={evt.id} id={`hour-row-${evt.id}`} className="flex items-stretch">
             <div className="w-12 shrink-0 flex items-center justify-end pr-2">
               <span className="text-[12px] sky-mono font-medium text-[color:var(--sky-dim)]">
                 {formatTimeAtLocation(evt.time, '24h', tz)}

@@ -195,24 +195,22 @@ export const LocationsScreen: React.FC<LocationsScreenProps> = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: '30px' }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: '30px' }}
-      transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: 'auto', opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: 0.22 }}
       drag="y"
       dragConstraints={{ top: 0, bottom: 0 }}
-      dragElastic={{ top: 0, bottom: 0.3 }}
+      dragElastic={{ top: 0.15, bottom: 0.15 }}
       dragMomentum={false}
       onDragEnd={(_, info) => {
-        if (info.velocity.y > 400 || info.offset.y > 80) onClose();
+        if (Math.abs(info.velocity.y) > 400 || Math.abs(info.offset.y) > 60) onClose();
       }}
-      className="absolute inset-0 z-50 flex flex-col p-6 overflow-hidden rounded-b-2xl md:rounded-3xl border border-[color:var(--sky-border)] backdrop-blur-md"
-      style={{
-        background: 'linear-gradient(180deg, var(--sky-bg), var(--sky-bg-2))',
-      }}
+      className="overflow-hidden mx-4 mt-2 rounded-2xl bg-[color:var(--sky-surface)] text-[color:var(--sky-fg)] border border-[color:var(--sky-border)] shadow-xl max-h-[460px] flex flex-col z-30"
     >
-      {/* Header Bar */}
-      <div className="flex items-center justify-between mb-4 shrink-0">
+      <div className="p-4 flex flex-col min-h-0 overflow-hidden">
+        {/* Header Bar */}
+        <div className="flex items-center justify-between mb-3 shrink-0">
         <div className="flex items-center gap-2">
           <MapPin size={18} className="text-[color:var(--sky-accent)] animate-pulse" />
           <h3 className="text-sm font-bold tracking-tight text-[color:var(--sky-fg)] uppercase sky-title">
@@ -375,7 +373,7 @@ export const LocationsScreen: React.FC<LocationsScreenProps> = ({
           )}
         </div>
       </div>
-
+      </div>
     </motion.div>
   );
 };

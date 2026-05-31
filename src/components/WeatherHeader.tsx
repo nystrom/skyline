@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { WeatherData, UserSettings, DataSource, WeatherWarning } from '../types';
 import { WeatherIcon } from './WeatherIcon';
-import { Settings, Info, RefreshCw, X, Check, AlertTriangle } from 'lucide-react';
+import { Settings, Info, RefreshCw, X, Check, AlertTriangle, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   convertTemp,
@@ -17,6 +17,7 @@ import {
 import { WindDirectionArrow } from './WindDirectionArrow';
 import { formatLocationLabel } from '../utils/savedLocation';
 import { conditionCardStyle } from '../utils/conditionPalette';
+import { LocationsScreen } from './LocationsScreen';
 
 interface WeatherHeaderProps {
   weatherData: WeatherData;
@@ -30,7 +31,6 @@ interface WeatherHeaderProps {
   onDismissWarnings?: () => void;
   dataSource: DataSource;
   onSelectNow?: () => void;
-  onOpenLocations: () => void;
   onShowWarnings?: (warnings: WeatherWarning[]) => void;
 }
 
@@ -46,7 +46,6 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
   onDismissWarnings,
   dataSource,
   onSelectNow,
-  onOpenLocations,
   onShowWarnings,
 }) => {
   const tz = {
@@ -115,6 +114,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
   };
 
   const [showSettings, setShowSettings] = useState(false);
+  const [showLocations, setShowLocations] = useState(false);
   const [draftSettings, setDraftSettings] = useState<UserSettings>(settings);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -136,6 +136,12 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
       setDraftSettings(settings);
     }
     setShowSettings(!showSettings);
+    setShowLocations(false);
+  };
+
+  const handleToggleLocations = () => {
+    setShowLocations(!showLocations);
+    setShowSettings(false);
   };
 
   const handleCancelSettings = () => {
@@ -198,7 +204,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
       }
     }
 
-    return { label: 'PRECIP', value: `${current.precipProb}%` };
+    return { label: 'PRECIPITATION', value: `${current.precipProb}%` };
   };
 
   const windChip = (): { label: string; value: string } => {
@@ -219,8 +225,8 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
     const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
     const desc = cap(current.description);
     const upcoming = upcomingConditionsLine();
-    if (!upcoming) return `${desc}.`;
-    return `${desc}. ${cap(upcoming)}.`;
+    if (!upcoming) return desc;
+    return `${desc}. ${cap(upcoming)}`;
   };
 
   const chips = [rainChip(), humidityChip(), windChip()];
@@ -236,11 +242,14 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
       {/* TOP BAR: location · time + controls */}
       <div className="flex items-center justify-between px-4 pt-3">
         <button
-          onClick={onOpenLocations}
-          className="sky-mono text-[11px] font-bold tracking-widest uppercase text-[color:var(--sky-dim)] hover:text-[color:var(--sky-muted)] transition-colors"
+          onClick={handleToggleLocations}
+          className="flex items-center gap-1 sky-mono text-[13px] font-bold tracking-wider uppercase text-[color:var(--sky-dim)] hover:text-[color:var(--sky-muted)] transition-colors cursor-pointer"
           aria-label="Change location"
         >
-          {headerLocationLabel} · {formattedTime}
+          <span>{headerLocationLabel}</span>
+          <ChevronDown size={14} className="opacity-70 mt-[-1px] shrink-0" />
+          <span className="opacity-40 font-normal px-0.5">·</span>
+          <span className="font-medium opacity-80">{formattedTime}</span>
         </button>
         <div className="flex items-center gap-1">
           {isLoading && (
@@ -454,6 +463,17 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
         )}
       </AnimatePresence>
 
+      {/* LOCATIONS DRAWER */}
+      <AnimatePresence>
+        {showLocations && (
+          <LocationsScreen
+            settings={settings}
+            updateSettings={updateSettings}
+            onClose={() => setShowLocations(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Warning banner */}
       {fetchWarnings.length > 0 && (
         <div className="mx-4 mt-2 p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl flex items-start justify-between gap-2">
@@ -504,33 +524,33 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelectNow?.()}
         role="button"
         tabIndex={0}
-        className="px-4 pt-4 flex items-end gap-3 cursor-pointer"
+        className="px-4 pt-1.5 pb-2.5 flex items-end gap-3 cursor-pointer"
         aria-label="Jump to current conditions"
       >
         <div className="text-[76px] leading-none font-black tracking-tighter sky-title text-[color:var(--sky-fg)] tabular-nums">
           {convertTemp(current.temp, settings.tempUnit)}°
         </div>
-        <div className="pb-3 flex items-center gap-2">
-          <WeatherIcon name={current.iconName} size={64} className="text-amber-400" />
-          {current.warnings && current.warnings.length > 0 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onShowWarnings?.(current.warnings || []);
-              }}
-              className="text-red-500 hover:text-red-400 cursor-pointer animate-pulse focus:outline-none flex items-center justify-center p-1 rounded-full hover:bg-red-500/10 transition-colors"
-              aria-label="Show active warnings"
-            >
-              <AlertTriangle size={24} />
-            </button>
-          )}
+        <div className="flex flex-col gap-0.5 pb-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <WeatherIcon name={current.iconName} size={64} className="text-amber-400" />
+            {current.warnings && current.warnings.length > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShowWarnings?.(current.warnings || []);
+                }}
+                className="text-red-500 hover:text-red-400 cursor-pointer animate-pulse focus:outline-none flex items-center justify-center p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                aria-label="Show active warnings"
+              >
+                <AlertTriangle size={24} />
+              </button>
+            )}
+          </div>
+          <p className="text-[15px] font-bold text-[color:var(--sky-muted)] leading-tight">
+            {buildDescription()}
+          </p>
         </div>
       </div>
-
-      {/* Description */}
-      <p className="px-4 pt-1 pb-2 text-[15px] font-bold text-[color:var(--sky-muted)] leading-snug">
-        {buildDescription()}
-      </p>
 
       {/* Stat chips */}
       <div className="px-4 pb-4 flex gap-2">

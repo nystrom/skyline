@@ -14,7 +14,6 @@ import { DailyScroller } from './components/DailyScroller';
 import { formatTimeAtLocation } from './utils/unitConverter';
 import { WeatherTimeline } from './components/WeatherTimeline';
 import { WeatherIcon } from './components/WeatherIcon';
-import { LocationsScreen } from './components/LocationsScreen';
 import { AnimatePresence, motion } from 'motion/react';
 import { AlertTriangle, X } from 'lucide-react';
 
@@ -106,7 +105,6 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [activeDayIdx, setActiveDayIdx] = useState(0);
-  const [activeScreen, setActiveScreen] = useState<'home' | 'locations'>('home');
   const [selectedWarnings, setSelectedWarnings] = useState<WeatherWarning[] | null>(null);
   const loadAbortRef = useRef<AbortController | null>(null);
   const scrollSpyBlockedRef = useRef(false);
@@ -378,7 +376,6 @@ export default function App() {
                   onDismissWarnings={() => setFetchWarnings([])}
                   dataSource={dataSource}
                   onSelectNow={handleSelectNow}
-                  onOpenLocations={() => setActiveScreen('locations')}
                   onShowWarnings={(warnings) => setSelectedWarnings(warnings)}
                 />
                 <DailyScroller
@@ -410,15 +407,7 @@ export default function App() {
               </div>
             </div>
           )}
-          <AnimatePresence>
-            {activeScreen === 'locations' && (
-              <LocationsScreen
-                settings={settings}
-                updateSettings={updateSettings}
-                onClose={() => setActiveScreen('home')}
-              />
-            )}
-          </AnimatePresence>
+
           <AnimatePresence>
             {selectedWarnings && selectedWarnings.length > 0 && (
               <motion.div
