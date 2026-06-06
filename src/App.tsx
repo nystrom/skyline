@@ -430,8 +430,9 @@ export default function App() {
                   />
                 </>
               ) : (
-                <>
-                  <div className="sticky top-0 z-50">
+                <div className="relative">
+                  <DesignView weatherData={displayData} settings={settings} design={activeDesign} />
+                  <div className="absolute top-0 left-0 right-0 z-50">
                     <WeatherHeader
                       weatherData={displayData}
                       settings={settings}
@@ -444,10 +445,10 @@ export default function App() {
                       onShowWarnings={(warnings) => setSelectedWarnings(warnings)}
                       activeDesign={activeDesign}
                       onDesignChange={handleDesignChange}
+                      overlayMode
                     />
                   </div>
-                  <DesignView weatherData={displayData} settings={settings} design={activeDesign} />
-                </>
+                </div>
               )}
             </div>
           ) : (
