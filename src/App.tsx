@@ -16,8 +16,10 @@ import { WeatherTimeline } from './components/WeatherTimeline';
 import { WeatherIcon } from './components/WeatherIcon';
 import { AnimatePresence, motion } from 'motion/react';
 import { AlertTriangle, X } from 'lucide-react';
+import { DesignView, type DesignVariant } from './components/designs/DesignView';
 
 const ACTIVE_LOCATION_KEY = 'sky_timeline_active_location';
+const DESIGN_KEY = 'sky_timeline_design';
 const THEME_KEY = 'sky_timeline_theme';
 const REFRESH_MINUTES_KEY = 'sky_timeline_refresh_minutes';
 
@@ -96,6 +98,17 @@ export default function App() {
       refreshIntervalMinutes: savedRefreshMinutes,
     };
   });
+
+  const [activeDesign, setActiveDesign] = useState<DesignVariant | 'classic'>(() => {
+    const saved = localStorage.getItem(DESIGN_KEY);
+    if (saved === 'minimal' || saved === 'atmospheric' || saved === 'bold') return saved;
+    return 'classic';
+  });
+
+  const handleDesignChange = (v: DesignVariant | 'classic') => {
+    setActiveDesign(v);
+    localStorage.setItem(DESIGN_KEY, v);
+  };
 
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [lastLiveData, setLastLiveData] = useState<WeatherData | null>(null);
@@ -375,42 +388,67 @@ export default function App() {
           {displayData ? (
             <div
               id="weather-timeline-container"
-              key={`${displayData.lat},${displayData.lon}`}
+              key={`${displayData.lat},${displayData.lon},${activeDesign}`}
               className="flex-1 min-h-0 overflow-y-auto scrollbar-none relative z-10"
             >
-              <div id="weather-top-stack" ref={topStackRef} className="sticky top-0 z-30">
-                <WeatherHeader
-                  weatherData={displayData}
-                  settings={settings}
-                  updateSettings={updateSettings}
-                  isLoading={isLoading}
-                  onRefresh={handleRefresh}
-                  errorMsg={errorMsg}
-                  fetchWarnings={fetchWarnings}
-                  onDismissError={() => setErrorMsg(null)}
-                  onDismissWarnings={() => setFetchWarnings([])}
-                  dataSource={dataSource}
-                  onSelectNow={handleSelectNow}
-                  onShowWarnings={(warnings) => setSelectedWarnings(warnings)}
-                />
-                <DailyScroller
-                  daily={displayData.daily}
-                  selectedDayIdx={activeDayIdx}
-                  onSelectDay={setActiveDayIdx}
-                  onBeforeTimelineScroll={blockScrollSpy}
-                  settings={settings}
-                />
-              </div>
-              <WeatherTimeline
-                daily={displayData.daily}
-                settings={settings}
-                activeDayIdx={activeDayIdx}
-                onActiveDayChange={setActiveDayIdx}
-                scrollSpyBlockedRef={scrollSpyBlockedRef}
-                timeZone={displayData.timeZone}
-                timeZoneOffsetMinutes={displayData.timeZoneOffsetMinutes}
-                onShowWarnings={(warnings) => setSelectedWarnings(warnings)}
-              />
+              {activeDesign === 'classic' ? (
+                <>
+                  <div id="weather-top-stack" ref={topStackRef} className="sticky top-0 z-30">
+                    <WeatherHeader
+                      weatherData={displayData}
+                      settings={settings}
+                      updateSettings={updateSettings}
+                      isLoading={isLoading}
+                      onRefresh={handleRefresh}
+                      errorMsg={errorMsg}
+                      fetchWarnings={fetchWarnings}
+                      onDismissError={() => setErrorMsg(null)}
+                      onDismissWarnings={() => setFetchWarnings([])}
+                      dataSource={dataSource}
+                      onSelectNow={handleSelectNow}
+                      onShowWarnings={(warnings) => setSelectedWarnings(warnings)}
+                      activeDesign={activeDesign}
+                      onDesignChange={handleDesignChange}
+                    />
+                    <DailyScroller
+                      daily={displayData.daily}
+                      selectedDayIdx={activeDayIdx}
+                      onSelectDay={setActiveDayIdx}
+                      onBeforeTimelineScroll={blockScrollSpy}
+                      settings={settings}
+                    />
+                  </div>
+                  <WeatherTimeline
+                    daily={displayData.daily}
+                    settings={settings}
+                    activeDayIdx={activeDayIdx}
+                    onActiveDayChange={setActiveDayIdx}
+                    scrollSpyBlockedRef={scrollSpyBlockedRef}
+                    timeZone={displayData.timeZone}
+                    timeZoneOffsetMinutes={displayData.timeZoneOffsetMinutes}
+                    onShowWarnings={(warnings) => setSelectedWarnings(warnings)}
+                  />
+                </>
+              ) : (
+                <>
+                  <div className="sticky top-0 z-50">
+                    <WeatherHeader
+                      weatherData={displayData}
+                      settings={settings}
+                      updateSettings={updateSettings}
+                      isLoading={isLoading}
+                      onRefresh={handleRefresh}
+                      errorMsg={null}
+                      dataSource={dataSource}
+                      onSelectNow={handleSelectNow}
+                      onShowWarnings={(warnings) => setSelectedWarnings(warnings)}
+                      activeDesign={activeDesign}
+                      onDesignChange={handleDesignChange}
+                    />
+                  </div>
+                  <DesignView weatherData={displayData} settings={settings} design={activeDesign} />
+                </>
+              )}
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[400px]">

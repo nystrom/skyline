@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { WeatherData, UserSettings, DataSource, WeatherWarning } from '../types';
 import { WeatherIcon } from './WeatherIcon';
 import { Settings, Info, RefreshCw, X, Check, AlertTriangle, ChevronDown } from 'lucide-react';
+import type { DesignVariant } from './designs/DesignView';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   convertTemp,
@@ -33,6 +34,8 @@ interface WeatherHeaderProps {
   dataSource: DataSource;
   onSelectNow?: () => void;
   onShowWarnings?: (warnings: WeatherWarning[]) => void;
+  activeDesign?: DesignVariant | 'classic';
+  onDesignChange?: (v: DesignVariant | 'classic') => void;
 }
 
 export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
@@ -48,6 +51,8 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
   dataSource,
   onSelectNow,
   onShowWarnings,
+  activeDesign = 'classic',
+  onDesignChange,
 }) => {
   const tz = {
     timeZone: weatherData.timeZone,
@@ -351,6 +356,24 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
                   >
                     °F
                   </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[color:var(--sky-muted)] font-medium">Design</span>
+                <div className="flex gap-1 bg-[color:var(--sky-card)] p-0.5 rounded-lg">
+                  {(['classic', 'minimal', 'atmospheric', 'bold'] as const).map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => onDesignChange?.(d)}
+                      className={`px-2 py-1 rounded text-xs font-bold transition ${
+                        activeDesign === d ? 'bg-[color:var(--sky-fg)] text-[color:var(--sky-bg)]' : 'text-[color:var(--sky-dim)] hover:text-[color:var(--sky-fg)]'
+                      }`}
+                    >
+                      {d === 'atmospheric' ? 'Atmo' : d.charAt(0).toUpperCase() + d.slice(1)}
+                    </button>
+                  ))}
                 </div>
               </div>
 
