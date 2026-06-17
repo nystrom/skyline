@@ -27,6 +27,7 @@ export function HomeBold({ s, units, precipUnit, windSpeedUnit }: Props) {
   const phrase = precipPhrase(s);
   const hours = s.hourly;
   const [sel, setSel] = useState(0);
+  const [warningExpanded, setWarningExpanded] = useState(false);
   const mono = 'ui-monospace, "SF Mono", Menlo, monospace';
   const white = '#fff';
   const dim = 'rgba(255,255,255,0.55)';
@@ -82,16 +83,47 @@ export function HomeBold({ s, units, precipUnit, windSpeedUnit }: Props) {
       </div>
 
       {s.severe && (
-        <div style={{
-          marginTop: 18, borderRadius: 16, overflow: 'hidden',
-          background: sky.accent, color: '#241405',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px' }}>
-            <span style={{ fontSize: 22, fontWeight: 900 }}>⚠</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: 0.3, textTransform: 'uppercase' }}>{s.severe.title}</div>
-              <div style={{ fontFamily: mono, fontSize: 12, fontWeight: 600, opacity: 0.8 }}>{s.severe.detail.toUpperCase()}</div>
+        <div
+          onClick={() => setWarningExpanded(!warningExpanded)}
+          style={{
+            marginTop: 18, borderRadius: 16, overflow: 'hidden',
+            background: sky.accent, color: '#241405',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <div style={{ padding: '12px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 22, fontWeight: 900, shrink: 0 } as React.CSSProperties}>⚠</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: 0.3, textTransform: 'uppercase' }}>{s.severe.title}</div>
+                {s.severe.sub && (
+                  <div style={{ fontFamily: mono, fontSize: 10, fontWeight: 700, opacity: 0.6, textTransform: 'uppercase', marginTop: 1 }}>
+                    {s.severe.sub}
+                  </div>
+                )}
+              </div>
+              <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', opacity: 0.6, fontFamily: mono, shrink: 0 } as React.CSSProperties}>
+                {warningExpanded ? 'Collapse ▲' : 'Expand ▼'}
+              </span>
             </div>
+            {s.severe.detail && (
+              <div style={{
+                fontFamily: mono,
+                fontSize: 11,
+                fontWeight: 600,
+                opacity: 0.8,
+                marginTop: 6,
+                lineHeight: 1.45,
+                whiteSpace: warningExpanded ? 'pre-wrap' : 'normal',
+                display: warningExpanded ? 'block' : '-webkit-box',
+                WebkitLineClamp: warningExpanded ? 'none' : 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }}>
+                {warningExpanded ? s.severe.detail : s.severe.detail.toUpperCase()}
+              </div>
+            )}
           </div>
         </div>
       )}

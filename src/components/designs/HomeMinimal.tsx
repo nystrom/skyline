@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import type React from 'react';
 import type { WxScenario } from './wxTypes';
 import { fmtTemp } from './wxUtils';
@@ -98,6 +98,7 @@ const sectionLabel: React.CSSProperties = {
 };
 
 export function HomeMinimal({ s, units }: Props) {
+  const [warningExpanded, setWarningExpanded] = useState(false);
   const gradId = useId().replace(/:/g, 'g');
   const fmt = (c: number) => fmtTemp(c, units);
   const hours = s.hourly;
@@ -188,13 +189,45 @@ export function HomeMinimal({ s, units }: Props) {
 
       {/* Severe alert */}
       {s.severe && (
-        <div style={{
-          ...glass,
-          margin: '10px 16px 0', borderRadius: 16, padding: '12px 14px',
-          background: 'rgba(75,52,5,0.50)', borderColor: 'rgba(244,196,48,0.24)',
-        }}>
-          <div style={{ fontSize: 14.5, fontWeight: 500 }}>⚠ {s.severe.title}</div>
-          <div style={{ fontSize: 12, color: MUTED, marginTop: 4 }}>{s.severe.detail}</div>
+        <div
+          onClick={() => setWarningExpanded(!warningExpanded)}
+          style={{
+            ...glass,
+            margin: '10px 16px 0', borderRadius: 16, padding: '12px 14px',
+            background: 'rgba(75,52,5,0.50)', borderColor: 'rgba(244,196,48,0.24)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 14.5, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>⚠</span>
+              <span>{s.severe.title}</span>
+            </div>
+            <span style={{ fontSize: 10, opacity: 0.6, textTransform: 'uppercase', fontFamily: MONO }}>
+              {warningExpanded ? 'Collapse ▲' : 'Expand ▼'}
+            </span>
+          </div>
+          {s.severe.sub && (
+            <div style={{ fontSize: 11, color: MUTED, marginTop: 2, fontFamily: MONO }}>
+              {s.severe.sub}
+            </div>
+          )}
+          {s.severe.detail && (
+            <div style={{
+              fontSize: 12,
+              color: MUTED,
+              marginTop: 6,
+              lineHeight: 1.4,
+              whiteSpace: warningExpanded ? 'pre-wrap' : 'normal',
+              display: warningExpanded ? 'block' : '-webkit-box',
+              WebkitLineClamp: warningExpanded ? 'none' : 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}>
+              {s.severe.detail}
+            </div>
+          )}
         </div>
       )}
 

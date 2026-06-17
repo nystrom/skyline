@@ -53,6 +53,7 @@ export function HomeAtmospheric({ s, units }: Props) {
   const phrase = precipPhrase(s);
   const hours = s.hourly;
   const [sel, setSel] = useState<number | null>(null);
+  const [warningExpanded, setWarningExpanded] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const white = '#fff';
@@ -119,19 +120,42 @@ export function HomeAtmospheric({ s, units }: Props) {
       </div>
 
       {s.severe && (
-        <div style={{
-          marginTop: 20, borderRadius: 20, padding: '14px 16px',
-          background: 'linear-gradient(120deg, rgba(232,137,59,0.34), rgba(232,137,59,0.18))',
-          border: '0.5px solid rgba(255,200,150,0.55)', display: 'flex', gap: 12, alignItems: 'flex-start',
-        }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 9, background: sky.accent, color: '#3a2410',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 19, flexShrink: 0,
-          }}>!</div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700 }}>{s.severe.title}</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.82)', marginTop: 2 }}>{s.severe.sub}</div>
+        <div
+          onClick={() => setWarningExpanded(!warningExpanded)}
+          style={{
+            marginTop: 20, borderRadius: 20, padding: '14px 16px',
+            background: 'linear-gradient(120deg, rgba(232,137,59,0.34), rgba(232,137,59,0.18))',
+            border: '0.5px solid rgba(255,200,150,0.55)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 9, background: sky.accent, color: '#3a2410',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 19, flexShrink: 0,
+            }}>!</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>{s.severe.title}</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.82)', marginTop: 2 }}>{s.severe.sub}</div>
+            </div>
+            <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', opacity: 0.6, alignSelf: 'center', flexShrink: 0 } as React.CSSProperties}>
+              {warningExpanded ? 'Collapse ▲' : 'Expand ▼'}
+            </span>
           </div>
+          {s.severe.detail && warningExpanded && (
+            <div style={{
+              fontSize: 12,
+              color: 'rgba(255,255,255,0.82)',
+              marginTop: 10,
+              lineHeight: 1.45,
+              whiteSpace: 'pre-wrap',
+              borderTop: '0.5px solid rgba(255,255,255,0.15)',
+              paddingTop: 8,
+            }}>
+              {s.severe.detail}
+            </div>
+          )}
         </div>
       )}
 
