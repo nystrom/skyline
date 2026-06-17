@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import type { WeatherData, UserSettings } from '../../types';
 import { adaptWeatherData } from './weatherAdapter';
 import { HomeMinimal } from './HomeMinimal';
@@ -12,8 +13,17 @@ interface Props {
 }
 
 export function DesignView({ weatherData, settings, design }: Props) {
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setTick((n) => n + 1), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+
   const s = adaptWeatherData(weatherData, settings.clockFormat);
   const units = settings.tempUnit;
+  const precipUnit = settings.precipUnit ?? 'mm/h';
+  const windSpeedUnit = settings.windSpeedUnit ?? 'm/s';
 
   switch (design) {
     case 'minimal':
@@ -21,7 +31,7 @@ export function DesignView({ weatherData, settings, design }: Props) {
     case 'atmospheric':
       return <HomeAtmospheric s={s} units={units} />;
     case 'bold':
-      return <HomeBold s={s} units={units} />;
+      return <HomeBold s={s} units={units} precipUnit={precipUnit} windSpeedUnit={windSpeedUnit} />;
   }
 }
 

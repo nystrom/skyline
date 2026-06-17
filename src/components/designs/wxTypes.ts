@@ -21,16 +21,21 @@ export interface WxSky {
 
 export interface WxHour {
   label: string;
+  dayLabel: string;  // "Today", "Tomorrow", "Mon", etc.
+  dateStr: string;   // "Jun 6"
   night: boolean;
   t: number;
   prob: number;
   mm: number;
+  windMs: number;
+  windDeg: number;
   cond: WxIconType;
   intensity: string | null;
 }
 
 export interface WxDayForecast {
   day: string;
+  dateNum: number;
   cond: WxIconType;
   prob: number;
   hiC: number;
@@ -71,6 +76,7 @@ export interface WxScenario {
   hiC: number;
   loC: number;
   windKmh: number;
+  windDeg: number;
   windDir: string;
   humidity: number;
   sunrise: string;

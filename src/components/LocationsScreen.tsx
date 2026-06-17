@@ -15,13 +15,7 @@ import {
   SAVED_LOCATIONS_V2_KEY,
 } from '../utils/savedLocation';
 
-const DEFAULT_SAVED: SavedLocation[] = [
-  { id: '47.3769,8.5417', label: 'Zurich', lat: 47.3769, lon: 8.5417, country: 'CH' },
-  { id: '51.5074,-0.1278', label: 'London', lat: 51.5074, lon: -0.1278, country: 'GB' },
-  { id: '64.1466,-21.9426', label: 'Reykjavik', lat: 64.1466, lon: -21.9426, country: 'IS' },
-  { id: '23.4162,25.6628', label: 'Sahara', lat: 23.4162, lon: 25.6628, country: 'EG' },
-  { id: '35.6762,139.6503', label: 'Tokyo', lat: 35.6762, lon: 139.6503, country: 'JP' },
-];
+const DEFAULT_SAVED: SavedLocation[] = [];
 
 function loadSavedLocations(): SavedLocation[] {
   try {

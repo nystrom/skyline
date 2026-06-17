@@ -232,6 +232,7 @@ export async function fetchLiveWeather(
     showMoonriseMoonset: true,
     refreshIntervalMinutes: 10,
     units: 'metric',
+    precipUnit: 'mm/h',
     activeLocation: location,
   };
   const result = await fetchWeatherForLocation(location, settings, signal);

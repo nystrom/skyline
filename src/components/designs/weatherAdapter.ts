@@ -152,20 +152,25 @@ function kindToSky(kind: WeatherKind | undefined, isNight: boolean): WxSky {
   }
 }
 
-function buildPrecip(hourly: WxHour[]): WxPrecip {
+function buildPrecip(events: WeatherTimelineEvent[], hourly: WxHour[], clockFormat: '12h' | '24h', timeZone?: string): WxPrecip {
+  const now = Date.now();
+  const wetEvents = events.filter((e) => (e.precipAccum ?? 0) > 0.1);
 
-  const firstWetIdx = hourly.findIndex((h) => h.mm > 0.1);
-  const isActive = firstWetIdx === 0;
-
-  if (firstWetIdx < 0) {
+  if (wetEvents.length === 0) {
     return { kind: 'none', active: false, headline: 'No rain expected', line: 'Clear for the next 12 hours.' };
   }
 
-  const peakMm = Math.max(...hourly.map((h) => h.mm));
+  const firstWet = wetEvents[0];
+  const lastWet = wetEvents[wetEvents.length - 1];
+  const startsInMin = Math.round(Math.max(0, (firstWet.time.getTime() - now) / 60000));
+  const isActive = startsInMin < 5;
+
+  const peakMm = Math.max(...wetEvents.map((e) => e.precipAccum ?? 0));
   const peakLabel = intensityLabel(peakMm) ?? 'Light';
-  const lastWetIdx = hourly.reduce((acc, h, i) => (h.mm > 0.1 ? i : acc), -1);
-  const startLabel = isActive ? 'now' : hourly[firstWetIdx]?.label ?? '';
-  const endLabel = hourly[lastWetIdx]?.label ?? '';
+  const startLabel = isActive ? 'now' : formatHourLabel(firstWet.time, clockFormat, timeZone);
+  const endLabel = formatHourLabel(lastWet.time, clockFormat, timeZone);
+  const durationHours = Math.max(1, Math.round((lastWet.time.getTime() - firstWet.time.getTime()) / 3600000) + 1);
+  const durationLabel = durationHours <= 1 ? 'about an hour' : 'about ' + durationHours + ' hours';
 
   if (isActive) {
     return {
@@ -176,10 +181,6 @@ function buildPrecip(hourly: WxHour[]): WxPrecip {
       line: 'Easing around ' + endLabel + '.',
     };
   }
-
-  const startsInMin = firstWetIdx * 60;
-  const durationHours = lastWetIdx - firstWetIdx + 1;
-  const durationLabel = durationHours <= 1 ? 'about an hour' : 'about ' + durationHours + ' hours';
 
   return {
     kind: 'rain', active: false,
@@ -202,29 +203,45 @@ function buildSevere(warnings: WeatherData['current']['warnings'] | undefined): 
   };
 }
 
+function hourDayLabel(date: Date, timeZone?: string): string {
+  const opts = { year: 'numeric' as const, month: '2-digit' as const, day: '2-digit' as const, timeZone };
+  const nowStr = new Date().toLocaleDateString('en-US', opts);
+  const tmrStr = new Date(Date.now() + 86400000).toLocaleDateString('en-US', opts);
+  const dStr = date.toLocaleDateString('en-US', opts);
+  if (dStr === nowStr) return 'Today';
+  if (dStr === tmrStr) return 'Tomorrow';
+  return date.toLocaleDateString('en-US', { weekday: 'long', timeZone });
+}
+
+function hourDateStr(date: Date, timeZone?: string): string {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone });
+}
+
 function hourlyFromEvents(events: WeatherTimelineEvent[], limit: number, clockFormat: '12h' | '24h', timeZone?: string): WxHour[] {
-  const rows = events
-    .filter((e) => e.type === 'hourly_status' || e.type === 'now')
-    .slice(0, limit);
+  const rows = events.slice(0, limit);
   return rows.map((e) => {
     const isNight = e.time.getHours() >= 21 || e.time.getHours() < 6;
     const mm = (e.precipAccum ?? 0);
     return {
       label: formatHourLabel(e.time, clockFormat, timeZone),
+      dayLabel: hourDayLabel(e.time, timeZone),
+      dateStr: hourDateStr(e.time, timeZone),
       night: isNight,
       t: e.temp ?? 0,
       prob: e.precipProb ?? 0,
       mm,
+      windMs: e.windSpeed ?? 0,
+      windDeg: e.windDeg ?? 0,
       cond: kindToIcon(e.kind, isNight),
       intensity: intensityLabel(mm),
     };
   });
-
 }
 
 function dailyFromForecasts(daily: DailyForecast[]): WxDayForecast[] {
-  return daily.slice(0, 7).map((d, i) => ({
-    day: i === 0 ? 'Today' : i === 1 ? 'Tmr' : d.dayName.slice(0, 3),
+  return daily.map((d) => ({
+    day: d.dayName.slice(0, 3),
+    dateNum: d.date.getDate(),
     cond: kindToIcon(d.kind, false),
     prob: d.precipProb,
     hiC: d.tempMax,
@@ -241,11 +258,21 @@ export function adaptWeatherData(
   const timeZone = data.timeZone;
   const isNight = now.getHours() >= 21 || now.getHours() < 6;
   const todayEvents = data.daily[0]?.timelineEvents ?? [];
+  const currentHourStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), 0, 0, 0);
 
-  const hourly = hourlyFromEvents(todayEvents, 12, clockFormat, timeZone);
+  const multiDayEvents = data.daily.flatMap((d) => d.timelineEvents);
+  const allHourlyEvents = multiDayEvents.filter((e) => e.type === 'hourly_status' || e.type === 'now');
+  const futureEvents = allHourlyEvents.filter((e) => e.time >= currentHourStart);
+  // If fewer than 3 future events, the data may be stale; show all available hourly events instead.
+  const currentAndFutureEvents = futureEvents.length >= 3 ? futureEvents : allHourlyEvents;
+
+  const hourly = hourlyFromEvents(currentAndFutureEvents, 48, clockFormat, timeZone);
   const daily = dailyFromForecasts(data.daily);
   const severe = buildSevere(data.current.warnings);
-  const precip = buildPrecip(hourly);
+  const precipEvents = todayEvents.filter(
+    (e) => (e.type === 'hourly_status' || e.type === 'now') && e.time >= currentHourStart
+  );
+  const precip = buildPrecip(precipEvents, hourly.slice(0, 12), clockFormat, timeZone);
 
   const dateLabel = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone });
   const nowLabel = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone });
@@ -267,6 +294,7 @@ export function adaptWeatherData(
     hiC: data.daily[0]?.tempMax ?? data.current.temp,
     loC: data.daily[0]?.tempMin ?? data.current.temp,
     windKmh,
+    windDeg: data.current.windDeg ?? 0,
     windDir: degreesToCompass(data.current.windDeg ?? 0),
     humidity: data.current.humidity,
     sunrise: formatTimeShort(data.current.sunriseTime, timeZone),
