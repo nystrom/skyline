@@ -1,0 +1,1864 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Skyline Weather Redesign Prototype v2</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Geist', 'sans-serif'],
+              mono: ['Geist Mono', 'monospace'],
+            },
+          },
+        },
+      }
+    </script>
+    <!-- React, ReactDOM, Babel Pinned Versions -->
+    <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+    <style>
+      :root {
+        --sky-bg: #fdfcfb;
+        --sky-bg-2: #f5f5f4;
+        --sky-surface: #ffffff;
+        --sky-fg: rgba(12, 18, 35, 0.92);
+        --sky-muted: rgba(12, 18, 35, 0.68);
+        --sky-dim: rgba(12, 18, 35, 0.44);
+        --sky-accent: #0077aa;
+        --sky-border: rgba(10, 18, 35, 0.09);
+        --sky-card: rgba(10, 18, 35, 0.04);
+      }
+
+      .dark-theme-vars {
+        --sky-bg: #070a13;
+        --sky-bg-2: #0a1022;
+        --sky-surface: #0e1424;
+        --sky-fg: rgba(245, 248, 255, 0.92);
+        --sky-muted: rgba(245, 248, 255, 0.66);
+        --sky-dim: rgba(245, 248, 255, 0.48);
+        --sky-accent: #7cf6ff;
+        --sky-border: rgba(255, 255, 255, 0.10);
+        --sky-card: rgba(255, 255, 255, 0.06);
+      }
+
+      body {
+        background-color: #111;
+        color: #fff;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* Phone Frame Wrapper */
+      .phone-container {
+        position: relative;
+        width: 390px;
+        height: 844px;
+        background: #000;
+        border-radius: 50px;
+        padding: 12px;
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 12px #222;
+        box-sizing: border-box;
+      }
+
+      .phone-screen {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background-color: var(--sky-bg);
+        border-radius: 40px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .dynamic-island {
+        position: absolute;
+        top: 15px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 110px;
+        height: 30px;
+        background: #000;
+        border-radius: 20px;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .dynamic-island-camera {
+        width: 10px;
+        height: 10px;
+        background: #111;
+        border-radius: 50%;
+        margin-left: auto;
+        margin-right: 15px;
+        box-shadow: inset 0 0 3px rgba(255,255,255,0.2);
+      }
+
+      .home-indicator {
+        position: absolute;
+        bottom: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 140px;
+        height: 5px;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 10px;
+        z-index: 1000;
+        pointer-events: none;
+      }
+
+      /* Animations */
+      @keyframes spin-slow {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .animate-spin-slow {
+        animation: spin-slow 20s linear infinite;
+      }
+
+      @keyframes pulse-slow {
+        0%, 100% { opacity: 0.8; }
+        50% { opacity: 0.4; }
+      }
+      .animate-pulse-slow {
+        animation: pulse-slow 3s ease-in-out infinite;
+      }
+
+      .scrollbar-none::-webkit-scrollbar {
+        display: none;
+      }
+      .scrollbar-none {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      .animate-fade-in {
+        animation: fadeIn 0.2s ease-out forwards;
+      }
+
+      @keyframes slideIn {
+        from { transform: translateY(100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      .animate-slide-in {
+        animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      @keyframes pageFadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .animate-page-fade-in {
+        animation: pageFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- UI Frame Presentation -->
+    <div class="phone-container select-none mx-auto my-8">
+      <!-- Simulated Apple Notch/Dynamic Island -->
+      <div class="dynamic-island">
+        <div class="dynamic-island-camera"></div>
+      </div>
+      <!-- Internal Screen Root -->
+      <div id="app-root" class="w-full h-full"></div>
+      <!-- iOS Home indicator bar -->
+      <div class="home-indicator"></div>
+    </div>
+
+    <script type="text/babel">
+      const { useState, useEffect, useRef, useCallback } = React;
+
+      // Utility Functions
+      function convertTemp(c, unit) {
+        if (unit === 'F') return Math.round((c * 9) / 5 + 32);
+        return Math.round(c);
+      }
+
+      function convertWindSpeed(speedMs, unit) {
+        switch (unit) {
+          case 'kph':
+            return Math.round(speedMs * 3.6);
+          case 'mph':
+            return Math.round(speedMs * 2.23694);
+          case 'knots':
+            return Math.round(speedMs * 1.94384);
+          case 'm/s':
+          default:
+            return Math.round(speedMs);
+        }
+      }
+
+      function convertPrecip(mm, unit) {
+        if (unit === 'cm/h') return (mm / 10).toFixed(2);
+        if (unit === 'in/h') return (mm / 25.4).toFixed(2);
+        return mm.toFixed(1);
+      }
+
+      function getWindUnitLabel(unit) {
+        switch (unit) {
+          case 'kph': return 'km/h';
+          case 'mph': return 'mph';
+          case 'knots': return 'kt';
+          case 'm/s':
+          default: return 'm/s';
+        }
+      }
+
+      function windDegToRotation(deg) {
+        return (deg + 135) % 360;
+      }
+
+      function humanizeDur(min) {
+        if (min <= 0) return 'now';
+        const hh = Math.floor(min / 60);
+        const mm = min % 60;
+        if (hh && mm) return `${hh}h ${mm}m`;
+        if (hh) return `${hh}h`;
+        return `${mm}m`;
+      }
+
+      function intensityLabel(mm) {
+        if (!mm || mm <= 0) return null;
+        if (mm < 1) return 'Light';
+        if (mm < 4) return 'Moderate';
+        if (mm < 8) return 'Heavy';
+        return 'Torrential';
+      }
+
+      function intensityNorm(mm) {
+        return Math.max(0, Math.min(1, (mm || 0) / 8));
+      }
+
+      // Simulated Weather Data
+      const CITIES_DATA = {
+        Zurich: {
+          city: "Zurich",
+          timeZone: "Europe/Zurich",
+          current: {
+            temp: 24,
+            feelsLike: 25,
+            description: "Mostly Sunny",
+            kind: "Clear",
+            humidity: 48,
+            windSpeed: 3.3,
+            windDeg: 45,
+            sunriseTime: new Date(Date.now() - 3600000 * 5),
+            sunsetTime: new Date(Date.now() + 3600000 * 10),
+            warnings: []
+          },
+          daily: [
+            {
+              dayName: "Today",
+              date: new Date(),
+              kind: "Clear",
+              precipProb: 5,
+              tempMax: 26,
+              tempMin: 14,
+              description: "Sunny and warm throughout the day."
+            },
+            {
+              dayName: "Tomorrow",
+              date: new Date(Date.now() + 86400000),
+              kind: "PartlyCloudy",
+              precipProb: 15,
+              tempMax: 25,
+              tempMin: 15,
+              description: "Partly cloudy with pleasant temperatures."
+            },
+            {
+              dayName: "Wednesday",
+              date: new Date(Date.now() + 86400000 * 2),
+              kind: "MostlyCloudy",
+              precipProb: 25,
+              tempMax: 23,
+              tempMin: 13,
+              description: "Increasing cloud cover, dry."
+            },
+            {
+              dayName: "Thursday",
+              date: new Date(Date.now() + 86400000 * 3),
+              kind: "Showers",
+              precipProb: 70,
+              tempMax: 20,
+              tempMin: 12,
+              description: "Passing showers with cool winds."
+            },
+            {
+              dayName: "Friday",
+              date: new Date(Date.now() + 86400000 * 4),
+              kind: "Clear",
+              precipProb: 10,
+              tempMax: 22,
+              tempMin: 11,
+              description: "Clearing skies and comfortable."
+            }
+          ]
+        },
+        London: {
+          city: "London",
+          timeZone: "Europe/London",
+          current: {
+            temp: 14,
+            feelsLike: 13,
+            description: "Passing Showers",
+            kind: "Showers",
+            humidity: 82,
+            windSpeed: 6.7,
+            windDeg: 240,
+            sunriseTime: new Date(Date.now() - 3600000 * 6),
+            sunsetTime: new Date(Date.now() + 3600000 * 9),
+            warnings: []
+          },
+          daily: [
+            {
+              dayName: "Today",
+              date: new Date(),
+              kind: "Showers",
+              precipProb: 80,
+              tempMax: 15,
+              tempMin: 11,
+              description: "Light rain and showers, overcast."
+            },
+            {
+              dayName: "Tomorrow",
+              date: new Date(Date.now() + 86400000),
+              kind: "RainLight",
+              precipProb: 90,
+              tempMax: 14,
+              tempMin: 10,
+              description: "Continuous light rain. Cool."
+            },
+            {
+              dayName: "Wednesday",
+              date: new Date(Date.now() + 86400000 * 2),
+              kind: "MostlyCloudy",
+              precipProb: 40,
+              tempMax: 16,
+              tempMin: 11,
+              description: "Overcast with occasional drizzle."
+            },
+            {
+              dayName: "Thursday",
+              date: new Date(Date.now() + 86400000 * 3),
+              kind: "PartlyCloudy",
+              precipProb: 20,
+              tempMax: 18,
+              tempMin: 12,
+              description: "Some sun breaks in the afternoon."
+            },
+            {
+              dayName: "Friday",
+              date: new Date(Date.now() + 86400000 * 4),
+              kind: "Clear",
+              precipProb: 5,
+              tempMax: 19,
+              tempMin: 11,
+              description: "Bright sunny spells."
+            }
+          ]
+        },
+        NewYork: {
+          city: "New York",
+          timeZone: "America/New_York",
+          current: {
+            temp: 28,
+            feelsLike: 32,
+            description: "Severe Thunderstorms",
+            kind: "Thunderstorm",
+            humidity: 90,
+            windSpeed: 8.9,
+            windDeg: 180,
+            sunriseTime: new Date(Date.now() - 3600000 * 5),
+            sunsetTime: new Date(Date.now() + 3600000 * 11),
+            warnings: [
+              {
+                event: "Severe Thunderstorm Warning",
+                sender: "National Weather Service",
+                starts: new Date(Date.now() - 1800000),
+                ends: new Date(Date.now() + 3600000 * 3),
+                severity: "severe",
+                description: "Severe thunderstorms detected. Wind gusts up to 60 mph and large hail expected. Seek shelter in a sturdy building immediately."
+              }
+            ]
+          },
+          daily: [
+            {
+              dayName: "Today",
+              date: new Date(),
+              kind: "Thunderstorm",
+              precipProb: 95,
+              tempMax: 29,
+              tempMin: 22,
+              description: "Heavy thunderstorms with intense downpours."
+            },
+            {
+              dayName: "Tomorrow",
+              date: new Date(Date.now() + 86400000),
+              kind: "MostlyCloudy",
+              precipProb: 30,
+              tempMax: 26,
+              tempMin: 20,
+              description: "Humid and cloudy, occasional light rain."
+            },
+            {
+              dayName: "Wednesday",
+              date: new Date(Date.now() + 86400000 * 2),
+              kind: "Clear",
+              precipProb: 5,
+              tempMax: 28,
+              tempMin: 19,
+              description: "Sunny, less humid, nice breeze."
+            },
+            {
+              dayName: "Thursday",
+              date: new Date(Date.now() + 86400000 * 3),
+              kind: "Clear",
+              precipProb: 0,
+              tempMax: 30,
+              tempMin: 21,
+              description: "Clear and warm day."
+            },
+            {
+              dayName: "Friday",
+              date: new Date(Date.now() + 86400000 * 4),
+              kind: "PartlyCloudy",
+              precipProb: 15,
+              tempMax: 31,
+              tempMin: 22,
+              description: "Partly cloudy and hot."
+            }
+          ]
+        },
+        StMoritz: {
+          city: "St. Moritz",
+          timeZone: "Europe/Zurich",
+          current: {
+            temp: -2,
+            feelsLike: -6,
+            description: "Heavy Snow",
+            kind: "SnowHeavy",
+            humidity: 95,
+            windSpeed: 4.5,
+            windDeg: 320,
+            sunriseTime: new Date(Date.now() - 3600000 * 4),
+            sunsetTime: new Date(Date.now() + 3600000 * 9),
+            warnings: [
+              {
+                event: "Heavy Snow Alert",
+                sender: "MeteoSwiss",
+                starts: new Date(Date.now() - 3600000),
+                ends: new Date(Date.now() + 86400000),
+                severity: "moderate",
+                description: "Heavy snowfall expected above 1500m. Accumulations of 20-40cm likely. Road conditions will be hazardous."
+              }
+            ]
+          },
+          daily: [
+            {
+              dayName: "Today",
+              date: new Date(),
+              kind: "SnowHeavy",
+              precipProb: 99,
+              tempMax: 0,
+              tempMin: -5,
+              description: "Heavy snow throughout the day. Freezing."
+            },
+            {
+              dayName: "Tomorrow",
+              date: new Date(Date.now() + 86400000),
+              kind: "SnowLight",
+              precipProb: 80,
+              tempMax: 1,
+              tempMin: -4,
+              description: "Light snow tapering off in the evening."
+            },
+            {
+              dayName: "Wednesday",
+              date: new Date(Date.now() + 86400000 * 2),
+              kind: "MostlyCloudy",
+              precipProb: 20,
+              tempMax: 2,
+              tempMin: -6,
+              description: "Overcast and cold, dry."
+            },
+            {
+              dayName: "Thursday",
+              date: new Date(Date.now() + 86400000 * 3),
+              kind: "Clear",
+              precipProb: 5,
+              tempMax: 4,
+              tempMin: -8,
+              description: "Beautiful cold sunny mountain day."
+            },
+            {
+              dayName: "Friday",
+              date: new Date(Date.now() + 86400000 * 4),
+              kind: "Clear",
+              precipProb: 0,
+              tempMax: 5,
+              tempMin: -5,
+              description: "Sunny with clear blue skies."
+            }
+          ]
+        }
+      };
+
+      // Generate 48 hourly events for simulated cities
+      const generateHourlyEvents = (cityKey, cityData) => {
+        const events = [];
+        const baseTemp = cityData.current.temp;
+        const kind = cityData.current.kind;
+        const now = new Date();
+        const startHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), 0, 0, 0);
+
+        for (let i = 0; i < 48; i++) {
+          const hourTime = new Date(startHour.getTime() + 3600000 * i);
+          const hourNum = hourTime.getHours();
+          const tempOffset = Math.sin((hourNum - 6) / 24 * 2 * Math.PI) * 4;
+          const temp = Math.round(baseTemp + tempOffset);
+
+          let precipProb = 0;
+          let precipAccum = 0;
+
+          if (kind.includes("Rain") || kind.includes("Showers") || kind === "Thunderstorm") {
+            precipProb = Math.round(70 + Math.sin(i / 6) * 25);
+            precipAccum = Math.max(0, 0.5 + Math.sin(i / 4) * 3 + (kind === "Thunderstorm" ? 4 : 0));
+          } else if (kind.includes("Snow")) {
+            precipProb = Math.round(80 + Math.sin(i / 6) * 15);
+            precipAccum = Math.max(0, 0.4 + Math.sin(i / 4) * 2);
+          } else if (kind === "PartlyCloudy") {
+            precipProb = Math.max(0, Math.round(15 + Math.sin(i / 3) * 15));
+            precipAccum = precipProb > 25 ? 0.2 : 0;
+          }
+
+          events.push({
+            type: "hourly_status",
+            time: hourTime,
+            temp,
+            precipProb,
+            precipAccum: parseFloat(precipAccum.toFixed(1)),
+            windSpeed: cityData.current.windSpeed + Math.sin(i / 5) * 2,
+            windDeg: (cityData.current.windDeg + i * 5) % 360,
+            kind: precipAccum > 1.5 ? (kind.includes("Snow") ? "SnowHeavy" : "RainHeavy") : (precipAccum > 0 ? "RainLight" : (hourNum >= 21 || hourNum < 6 ? "Clear" : "Clear"))
+          });
+        }
+        return events;
+      };
+
+      // Populate timelineEvents for all cities
+      Object.keys(CITIES_DATA).forEach(key => {
+        const city = CITIES_DATA[key];
+        const events = generateHourlyEvents(key, city);
+        city.daily[0].timelineEvents = events;
+      });
+
+      // Helper functions
+      const degreesToCompass = (deg) => {
+        const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+        return dirs[Math.round(deg / 22.5) % 16];
+      };
+
+      const kindToIconType = (kind, isNight) => {
+        if (!kind) return isNight ? 'clear-night' : 'clear';
+        const k = kind.toLowerCase();
+        if (k.includes('clear')) return isNight ? 'clear-night' : 'clear';
+        if (k.includes('partly')) return isNight ? 'partly-night' : 'partly';
+        if (k.includes('mostly') || k.includes('cloudy') || k.includes('overcast')) return 'cloudy';
+        if (k.includes('heavy') && k.includes('snow')) return 'snow';
+        if (k.includes('snow')) return 'snow';
+        if (k.includes('heavy') && k.includes('rain')) return 'heavy';
+        if (k.includes('rain') || k.includes('showers') || k.includes('drizzle')) return 'rain';
+        if (k.includes('thunderstorm') || k.includes('storm')) return 'storm';
+        if (k.includes('fog') || k.includes('mist')) return 'fog';
+        return isNight ? 'clear-night' : 'clear';
+      };
+
+      const kindToSkyGrad = (kind, isNight) => {
+        if (isNight) {
+          return {
+            grad: 'linear-gradient(170deg, #070d24 0%, #131d44 52%, #283356 100%)',
+            text: 'light', accent: '#8ea2e8',
+            soft: 'rgba(255,255,255,0.12)', line: 'rgba(255,255,255,0.16)', glass: 'rgba(255,255,255,0.10)',
+          };
+        }
+        const k = kind.toLowerCase();
+        if (k.includes('thunderstorm') || k.includes('storm')) {
+          return {
+            grad: 'linear-gradient(170deg, #1c2333 0%, #2e3b52 50%, #445672 100%)',
+            text: 'light', accent: '#ffd666',
+            soft: 'rgba(255,255,255,0.12)', line: 'rgba(255,255,255,0.16)', glass: 'rgba(255,255,255,0.08)',
+          };
+        }
+        if (k.includes('rain') || k.includes('showers') || k.includes('drizzle')) {
+          return {
+            grad: 'linear-gradient(170deg, #32445a 0%, #4c637a 48%, #6a829a 100%)',
+            text: 'light', accent: '#78d2ff',
+            soft: 'rgba(255,255,255,0.15)', line: 'rgba(255,255,255,0.22)', glass: 'rgba(255,255,255,0.10)',
+          };
+        }
+        if (k.includes('snow')) {
+          return {
+            grad: 'linear-gradient(170deg, #3a4b60 0%, #687990 48%, #9bb2c6 100%)',
+            text: 'light', accent: '#a5f3fc',
+            soft: 'rgba(255,255,255,0.15)', line: 'rgba(255,255,255,0.22)', glass: 'rgba(255,255,255,0.10)',
+          };
+        }
+        if (k.includes('cloudy') || k.includes('overcast')) {
+          return {
+            grad: 'linear-gradient(170deg, #4b5e78 0%, #6f829c 48%, #93a6bf 100%)',
+            text: 'light', accent: '#a1e3ff',
+            soft: 'rgba(255,255,255,0.15)', line: 'rgba(255,255,255,0.22)', glass: 'rgba(255,255,255,0.10)',
+          };
+        }
+        if (k.includes('partly')) {
+          return {
+            grad: 'linear-gradient(170deg, #3a7abf 0%, #5b9ed6 44%, #90bde0 76%, #e8c87a 100%)',
+            text: 'light', accent: '#ffd166',
+            soft: 'rgba(255,255,255,0.20)', line: 'rgba(255,255,255,0.28)', glass: 'rgba(255,255,255,0.18)',
+          };
+        }
+        // Default Clear sky
+        return {
+          grad: 'linear-gradient(170deg, #2f7fd1 0%, #56a0e2 44%, #9ec9ee 76%, #f4d199 100%)',
+          text: 'light', accent: '#ffd166',
+          soft: 'rgba(255,255,255,0.20)', line: 'rgba(255,255,255,0.28)', glass: 'rgba(255,255,255,0.18)',
+        };
+      };
+
+      const formatHourLabel = (date, clockFormat) => {
+        return date.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: undefined,
+          hour12: clockFormat === '12h'
+        }).replace(':00', '').trim();
+      };
+
+      const formatTimeShort = (date, clockFormat) => {
+        if (!date) return '';
+        return date.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: clockFormat === '12h'
+        });
+      };
+
+      const adaptWeatherData = (data, clockFormat = '24h') => {
+        const now = new Date();
+        const isNight = now.getHours() >= 21 || now.getHours() < 6;
+        const todayEvents = data.daily[0]?.timelineEvents ?? [];
+
+        const hourly = todayEvents.map(e => {
+          const hourNight = e.time.getHours() >= 21 || e.time.getHours() < 6;
+          return {
+            label: formatHourLabel(e.time, clockFormat),
+            dayLabel: e.time.getDate() === now.getDate() ? 'Today' : 'Tomorrow',
+            dateStr: e.time.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            night: hourNight,
+            t: e.temp,
+            prob: e.precipProb,
+            mm: e.precipAccum,
+            windMs: e.windSpeed,
+            windDeg: e.windDeg,
+            cond: kindToIconType(e.kind, hourNight),
+            intensity: intensityLabel(e.precipAccum)
+          };
+        });
+
+        const daily = data.daily.map(d => ({
+          day: d.dayName.slice(0,3),
+          dateNum: d.date.getDate(),
+          cond: kindToIconType(d.kind, false),
+          prob: d.precipProb,
+          hiC: d.tempMax,
+          loC: d.tempMin,
+          note: d.description
+        }));
+
+        const wetEvents = todayEvents.filter(e => e.precipAccum > 0.1);
+        let precip = { kind: 'none', active: false, headline: 'No rain expected', line: 'Clear for the next 12 hours.' };
+
+        if (wetEvents.length > 0) {
+          const firstWet = wetEvents[0];
+          const lastWet = wetEvents[wetEvents.length - 1];
+          const startsInMin = Math.round(Math.max(0, (firstWet.time.getTime() - now.getTime()) / 60000));
+          const isActive = startsInMin < 5;
+          const peakMm = Math.max(...wetEvents.map(e => e.precipAccum));
+          const peakLabel = intensityLabel(peakMm) ?? 'Light';
+          const startLabel = isActive ? 'now' : formatHourLabel(firstWet.time, clockFormat);
+          const endLabel = formatHourLabel(lastWet.time, clockFormat);
+          const durationHours = Math.max(1, Math.round((lastWet.time.getTime() - firstWet.time.getTime()) / 3600000) + 1);
+          const durationLabel = durationHours <= 1 ? 'about an hour' : `about ${durationHours} hours`;
+
+          if (isActive) {
+            precip = {
+              kind: 'rain', active: true,
+              startLabel: 'now', endLabel, peakMm, peakLabel,
+              headline: `${peakLabel} rain right now`,
+              line: `Easing around ${endLabel}.`
+            };
+          } else {
+            precip = {
+              kind: 'rain', active: false,
+              startsInMin, startLabel, endLabel, durationLabel, peakMm, peakLabel,
+              headline: 'Rain starting soon',
+              line: `${peakLabel} rain around ${startLabel}, easing by ${endLabel}.`
+            };
+          }
+        }
+
+        const windKmh = data.current.windSpeed * 3.6;
+        const sky = kindToSkyGrad(data.current.kind, isNight);
+
+        return {
+          place: data.city,
+          nowLabel: now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: clockFormat === '12h' }),
+          dateLabel: now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
+          tempC: data.current.temp,
+          feelsC: data.current.feelsLike,
+          cond: kindToIconType(data.current.kind, isNight),
+          condLabel: data.current.description,
+          hiC: data.daily[0]?.tempMax ?? data.current.temp,
+          loC: data.daily[0]?.tempMin ?? data.current.temp,
+          windKmh,
+          windDir: degreesToCompass(data.current.windDeg),
+          humidity: data.current.humidity,
+          sunrise: formatTimeShort(data.current.sunriseTime, clockFormat),
+          sunset: formatTimeShort(data.current.sunsetTime, clockFormat),
+          sky,
+          precip,
+          severe: data.current.warnings && data.current.warnings.length > 0 ? {
+            title: data.current.warnings[0].event,
+            sub: data.current.warnings[0].description,
+            detail: `Issued by ${data.current.warnings[0].sender}`
+          } : null,
+          hourly,
+          daily
+        };
+      };
+
+      const precipPhrase = (s) => {
+        const p = s.precip;
+        if (!p || p.kind === 'none') {
+          return { kind: 'none', big: p ? p.headline : 'No rain expected', sub: p ? p.line : '' };
+        }
+        if (p.active) {
+          return {
+            kind: 'active',
+            big: (p.peakLabel ?? 'Heavy') + ' rain now',
+            sub: 'Easing by ' + (p.endLabel ?? '') + ' · ' + p.line,
+          };
+        }
+        return {
+          kind: 'soon',
+          big: 'Rain in ' + humanizeDur(p.startsInMin ?? 0),
+          sub: (p.peakLabel ?? '').toLowerCase() === 'moderate'
+            ? 'Starts around ' + (p.startLabel ?? '') + ', lasting ' + (p.durationLabel ?? '') + '.'
+            : p.line,
+        };
+      };
+
+      const smoothPath = (pts) => {
+        if (pts.length < 2) return '';
+        let d = `M ${pts[0][0]} ${pts[0][1]}`;
+        for (let i = 0; i < pts.length - 1; i++) {
+          const p0 = pts[i - 1] ?? pts[i];
+          const p1 = pts[i];
+          const p2 = pts[i + 1];
+          const p3 = pts[i + 2] ?? p2;
+          const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+          const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+          const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+          const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+          d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2[0]} ${p2[1]}`;
+        }
+        return d;
+      };
+
+      // Custom WeatherIcon SVG Component
+      const WeatherIconDesign = ({ type, size = 24, color = '#fff', accent = '#7cf6ff', strokeWidth = 1.5 }) => {
+        const commonProps = {
+          stroke: color,
+          strokeWidth,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          fill: 'none',
+          style: { width: size, height: size }
+        };
+
+        switch (type) {
+          case 'clear':
+            return (
+              <svg viewBox="0 0 24 24" {...commonProps}>
+                <circle cx="12" cy="12" r="5" stroke={accent} fill={`${accent}22`} />
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+              </svg>
+            );
+          case 'clear-night':
+            return (
+              <svg viewBox="0 0 24 24" {...commonProps}>
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke={accent} fill={`${accent}11`} />
+              </svg>
+            );
+          case 'partly':
+            return (
+              <svg viewBox="0 0 24 24" {...commonProps}>
+                <path d="M12 2a5 5 0 0 0-5 5c0 .4.05.79.16 1.16A5.5 5.5 0 0 0 2 13.5a5.5 5.5 0 0 0 5.5 5.5h9a5 5 0 0 0 1-9.9A5.5 5.5 0 0 0 12 2z" />
+                <circle cx="18" cy="6" r="3" stroke={accent} />
+                <path d="M18 1v2M23 6h-2" />
+              </svg>
+            );
+          case 'partly-night':
+            return (
+              <svg viewBox="0 0 24 24" {...commonProps}>
+                <path d="M12 3a6 6 0 0 0-6 6c0 .44.05.87.15 1.28A6.5 6.5 0 0 0 1.5 16.5 6.5 6.5 0 0 0 8 23h9a6 6 0 0 0 1.2-11.88A6 6 0 0 0 12 3z" />
+                <path d="M21 7.5A4.5 4.5 0 0 1 16.5 3a3.5 3.5 0 0 0 4.5 4.5z" stroke={accent} />
+              </svg>
+            );
+          case 'cloudy':
+            return (
+              <svg viewBox="0 0 24 24" {...commonProps}>
+                <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 1-9.9z" fill="rgba(255,255,255,0.05)" />
+              </svg>
+            );
+          case 'rain':
+            return (
+              <svg viewBox="0 0 24 24" {...commonProps}>
+                <path d="M16 13a4 4 0 0 0-8 0v4h8z" />
+                <path d="M8 21v-2M12 21v-4M16 21v-2" stroke={accent} />
+              </svg>
+            );
+          case 'heavy':
+            return (
+              <svg viewBox="0 0 24 24" {...commonProps}>
+                <path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25" />
+                <path d="M8 17l-2 4M12 17l-2 4M16 17l-2 4" stroke={accent} />
+              </svg>
+            );
+          case 'storm':
+            return (
+              <svg viewBox="0 0 24 24" {...commonProps}>
+                <path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 8.58" />
+                <path d="M13 11l-4 6h6l-4 6" stroke={accent} fill={accent} />
+              </svg>
+            );
+          case 'snow':
+            return (
+              <svg viewBox="0 0 24 24" {...commonProps}>
+                <path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25" />
+                <path d="M8 16h.01M12 16h.01M16 16h.01M10 20h.01M14 20h.01" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+              </svg>
+            );
+          case 'fog':
+            return (
+              <svg viewBox="0 0 24 24" {...commonProps}>
+                <path d="M20 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 1-9.9z" />
+                <path d="M5 22h14M8 18h8" stroke={accent} />
+              </svg>
+            );
+          default:
+            return (
+              <svg viewBox="0 0 24 24" {...commonProps}>
+                <circle cx="12" cy="12" r="10" />
+              </svg>
+            );
+        }
+      };
+
+      // Lucide Icons Mock (simple pure-SVG)
+      const NavigationIcon = ({ size = 16, style = {} }) => (
+        <svg viewBox="0 0 24 24" width={size} height={size} stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" style={style}>
+          <polygon points="3 11 22 2 13 21 11 13 3 11" />
+        </svg>
+      );
+
+      const AlertTriangleIcon = ({ size = 20, className = "" }) => (
+        <svg viewBox="0 0 24 24" width={size} height={size} stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      );
+
+      // 1. Classic Design View
+      function HomeClassic({ s, units, precipUnit }) {
+        const fmt = (c) => convertTemp(c, units);
+        return (
+          <div className="flex-1 flex flex-col p-6 space-y-6 pt-16">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight text-[color:var(--sky-fg)]">{s.place}</h1>
+                <p className="text-sm text-[color:var(--sky-muted)]">{s.nowLabel} · {s.dateLabel}</p>
+              </div>
+              <div className="text-right">
+                <span className="text-5xl font-extralight text-[color:var(--sky-fg)]">{fmt(s.tempC)}°</span>
+                <p className="text-sm font-semibold text-[color:var(--sky-accent)]">{s.condLabel}</p>
+              </div>
+            </div>
+
+            {s.severe && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex gap-3 items-start">
+                <AlertTriangleIcon className="text-red-500 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-sm font-bold text-red-500">{s.severe.title}</h3>
+                  <p className="text-xs text-[color:var(--sky-muted)] mt-1">{s.severe.sub}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Precip Panel */}
+            <div className="bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-2xl p-4">
+              <h2 className="text-sm font-semibold text-[color:var(--sky-muted)] uppercase tracking-wider mb-2">Precipitation</h2>
+              <p className="text-lg font-bold text-[color:var(--sky-fg)]">{s.precip.headline}</p>
+              <p className="text-xs text-[color:var(--sky-muted)] mt-1">{s.precip.line}</p>
+            </div>
+
+            {/* Timeline */}
+            <div className="space-y-4">
+              <h2 className="text-sm font-semibold text-[color:var(--sky-muted)] uppercase tracking-wider">Hourly Schedule</h2>
+              <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1 scrollbar-none">
+                {s.hourly.slice(0, 24).map((h, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 bg-[color:var(--sky-surface)] border border-[color:var(--sky-border)] rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-mono text-[color:var(--sky-muted)] w-12">{i === 0 ? "NOW" : h.label}</span>
+                      <WeatherIconDesign type={h.cond} size={22} color="var(--sky-fg)" accent="var(--sky-accent)" />
+                      <span className="text-sm font-semibold text-[color:var(--sky-fg)]">{fmt(h.t)}°</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs font-mono text-[color:var(--sky-muted)]">
+                      {h.mm > 0 && <span className="text-[color:var(--sky-accent)] font-semibold">{convertPrecip(h.mm, precipUnit)} {precipUnit}</span>}
+                      <span className="w-10 text-right">{h.prob}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Daily */}
+            <div className="grid grid-cols-5 gap-2 pt-2">
+              {s.daily.map((d, i) => (
+                <div key={i} className="flex flex-col items-center p-3 bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-xl text-center">
+                  <span className="text-xs text-[color:var(--sky-muted)] font-medium">{d.day}</span>
+                  <div className="my-2">
+                    <WeatherIconDesign type={d.cond} size={20} color="var(--sky-fg)" accent="var(--sky-accent)" />
+                  </div>
+                  <span className="text-sm font-bold text-[color:var(--sky-fg)]">{fmt(d.hiC)}°</span>
+                  <span className="text-xs text-[color:var(--sky-muted)]">{fmt(d.loC)}°</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      // Minimal view's custom 48h Precip Graph
+      function PrecipGraph({ hours, sky, units, precipUnit, gradId }) {
+        const [sel, setSel] = useState(null);
+        const wrapRef = useRef(null);
+        const fmt = (c) => convertTemp(c, units);
+        const padX = 8;
+        const GW = 330;
+        const GH = 150;
+
+        const xs = hours.map((_, i) => padX + (i / Math.max(1, hours.length - 1)) * (GW - padX * 2));
+
+        const maxMm = Math.max(1, ...hours.map((h) => h.mm));
+        const iy = (mm) => GH - 18 - (mm / maxMm) * (GH - 46);
+        const ipts = hours.map((h, i) => [xs[i], iy(h.mm)]);
+        const lastX = xs[xs.length - 1];
+        const areaPath = smoothPath(ipts) + ` L ${lastX} ${GH - 18} L ${xs[0]} ${GH - 18} Z`;
+        const linePath = smoothPath(ipts);
+
+        const tMin = Math.min(...hours.map((h) => h.t));
+        const tMax = Math.max(...hours.map((h) => h.t));
+        const tSpan = Math.max(1, tMax - tMin);
+        const ty = (t) => 20 + (1 - (t - tMin) / tSpan) * 40;
+        const tpath = smoothPath(hours.map((h, i) => [xs[i], ty(h.t)]));
+
+        const firstWet = hours.findIndex((h) => h.mm > 0);
+
+        const dayChanges = [];
+        hours.forEach((h, i) => {
+          if (i > 0 && h.dayLabel !== hours[i - 1].dayLabel) {
+            dayChanges.push({ i, label: h.dayLabel });
+          }
+        });
+
+        const onScrub = (clientX) => {
+          if (!wrapRef.current) return;
+          const r = wrapRef.current.getBoundingClientRect();
+          const frac = (clientX - r.left) / r.width;
+          const idx = Math.round(frac * (hours.length - 1));
+          setSel(Math.max(0, Math.min(hours.length - 1, idx)));
+        };
+
+        return (
+          <div ref={wrapRef} className="relative w-full touch-none select-none"
+            onPointerDown={(e) => {
+              e.currentTarget.setPointerCapture(e.pointerId);
+              onScrub(e.clientX);
+            }}
+            onPointerMove={(e) => {
+              if (e.buttons) onScrub(e.clientX);
+            }}
+            onPointerUp={(e) => {
+              try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) {}
+              setSel(null);
+            }}
+            onPointerCancel={(e) => {
+              try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) {}
+              setSel(null);
+            }}
+          >
+            <svg viewBox={`0 0 ${GW} ${GH}`} width="100%" height={GH} className="block overflow-visible">
+              <defs>
+                <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={sky.accent} stopOpacity="0.55" />
+                  <stop offset="100%" stopColor={sky.accent} stopOpacity="0.02" />
+                </linearGradient>
+              </defs>
+
+              <line x1={padX} y1={GH - 18} x2={GW - padX} y2={GH - 18} stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+
+              {dayChanges.map(({ i, label }) => (
+                <g key={i}>
+                  <line x1={xs[i]} y1={6} x2={xs[i]} y2={GH - 18} stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
+                  <text x={xs[i] + 3} y={14} fontSize="9" fill="rgba(255,255,255,0.45)"
+                    className="font-sans">{label}</text>
+                </g>
+              ))}
+
+              {firstWet > 0 && (
+                <line x1={xs[firstWet]} y1={6} x2={xs[firstWet]} y2={GH - 18}
+                  stroke={sky.accent} strokeWidth="1" strokeDasharray="3 3" opacity="0.7" />
+              )}
+
+              <path d={areaPath} fill={`url(#${gradId})`} />
+              <path d={linePath} fill="none" stroke={sky.accent} strokeWidth="2.5" strokeLinecap="round" />
+              <path d={tpath} fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.6" strokeDasharray="1 4" strokeLinecap="round" />
+
+              {sel !== null && (
+                <g>
+                  <line x1={xs[sel]} y1={6} x2={xs[sel]} y2={GH - 18} stroke="#fff" strokeWidth="1" opacity="0.7" />
+                  <circle cx={xs[sel]} cy={iy(hours[sel].mm)} r="4.5" fill="#fff" />
+                  <circle cx={xs[sel]} cy={ty(hours[sel].t)} r="3" fill="#fff" opacity="0.85" />
+                </g>
+              )}
+            </svg>
+
+            {sel !== null && (
+              <div className="absolute bg-neutral-950/80 border border-white/10 px-2.5 py-1.5 rounded-lg shadow-lg text-[10px] font-mono pointer-events-none z-50 text-white"
+                style={{
+                  top: -8,
+                  left: `${(xs[sel] / GW) * 100}%`,
+                  transform: sel >= hours.length - 4 ? 'translateX(-100%)' : sel <= 2 ? 'none' : 'translateX(-50%)'
+                }}
+              >
+                {hours[sel].label} · {fmt(hours[sel].t)}°
+                {hours[sel].mm > 0 ? ` · ${convertPrecip(hours[sel].mm, precipUnit)} ${precipUnit}` : ` · ${hours[sel].prob}%`}
+              </div>
+            )}
+
+            <div className="relative h-4 mt-1 flex justify-between px-1 text-[9px] text-white/40 font-mono">
+              {hours.map((h, i) => {
+                if (i !== 0 && i % 6 !== 0) return null;
+                const pct = (xs[i] / GW) * 100;
+                return (
+                  <span key={i} style={{
+                    position: 'absolute', left: `${pct}%`,
+                    transform: i === 0 ? 'none' : i >= hours.length - 3 ? 'translateX(-100%)' : 'translateX(-50%)'
+                  }}>
+                    {i === 0 ? 'Now' : h.label.replace(' ', '')}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
+
+      // 2. Minimal Design View (Linear / Vercel style)
+      function HomeMinimal({ s, units, precipUnit }) {
+        const sky = s.sky;
+        const fmt = (c) => convertTemp(c, units);
+        const phrase = precipPhrase(s);
+        const hours = s.hourly;
+        const white = '#fff';
+        const dim = 'rgba(255,255,255,0.62)';
+
+        const cardStyle = "bg-white/5 border border-white/10 rounded-3xl p-4 text-white shadow-sm";
+
+        return (
+          <div className="flex-1 flex flex-col p-6 space-y-4 pt-16 font-sans">
+            <div>
+              <span className="text-xs font-mono tracking-widest text-[color:var(--sky-accent)] uppercase">Forecast Dashboard</span>
+              <h1 className="text-3xl font-bold tracking-tight text-[color:var(--sky-fg)] mt-1">{s.place}</h1>
+              <p className="text-sm text-[color:var(--sky-muted)] mt-1">{s.nowLabel} · {s.condLabel} · {fmt(s.tempC)}°</p>
+            </div>
+
+            {/* Precipitation Graph card */}
+            <div className={cardStyle}>
+              <div className="flex justify-between items-baseline mb-3">
+                <div className="text-xs font-bold text-neutral-300 uppercase tracking-widest font-mono">Next 48 Hours</div>
+                <div className="text-[10px] text-white/50 flex gap-3 font-mono">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-1.5 rounded-full bg-[color:var(--sky-accent)] inline-block" />Precip
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 border-t border-dotted border-white/80 inline-block" />Temp
+                  </span>
+                </div>
+              </div>
+              <PrecipGraph hours={hours} sky={sky} units={units} precipUnit={precipUnit} gradId={`precip-${s.place.replace(/\s+/g, '')}`} />
+            </div>
+
+            {/* Outlook Card */}
+            <div className={cardStyle}>
+              <h3 className="text-xs font-bold text-neutral-300 uppercase tracking-widest font-mono mb-3">Outlook</h3>
+              <div className="divide-y divide-white/5">
+                {s.daily.map((d, i) => (
+                  <div key={i} className="flex justify-between items-center py-2.5 text-sm">
+                    <span className="font-semibold text-white/90 w-14">{d.day}</span>
+                    <WeatherIconDesign type={d.cond} size={18} color="#fff" accent={s.sky.accent} />
+                    <span className="text-xs text-white/50 w-24 truncate">{d.note}</span>
+                    <span className="font-mono text-right text-white">
+                      {fmt(d.hiC)}° <span className="opacity-40">/ {fmt(d.loC)}°</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // 3. Atmospheric Design View
+      function HomeAtmospheric({ s, units, windSpeedUnit, precipUnit }) {
+        const sky = s.sky;
+        const fmt = (c) => convertTemp(c, units);
+        const phrase = precipPhrase(s);
+        const hours = s.hourly;
+        const [sel, setSel] = useState(null);
+        const wrapRef = useRef(null);
+
+        const white = '#fff';
+        const dim = 'rgba(255,255,255,0.6)';
+        const padX = 10;
+        const GW = 330;
+        const GH = 150;
+        const xs = hours.map((_, i) => padX + (i / Math.max(1, hours.length - 1)) * (GW - padX * 2));
+
+        const maxMm = Math.max(1, ...hours.map((h) => h.mm));
+        const iy = (mm) => GH - 18 - (mm / maxMm) * (GH - 46);
+        const ipts = hours.map((h, i) => [xs[i], iy(h.mm)]);
+        const lastX = xs[xs.length - 1];
+        const areaPath = smoothPath(ipts) + ` L ${lastX} ${GH - 18} L ${xs[0]} ${GH - 18} Z`;
+        const linePath = smoothPath(ipts);
+
+        const tMin = Math.min(...hours.map((h) => h.t));
+        const tMax = Math.max(...hours.map((h) => h.t));
+        const tSpan = Math.max(1, tMax - tMin);
+        const ty = (t) => 20 + (1 - (t - tMin) / tSpan) * 40;
+        const tpath = smoothPath(hours.map((h, i) => [xs[i], ty(h.t)]));
+
+        const firstWet = hours.findIndex((h) => h.mm > 0);
+        const gradId = `wave-${s.place.replace(/\s+/g, '')}`;
+
+        const onScrub = (clientX) => {
+          if (!wrapRef.current) return;
+          const r = wrapRef.current.getBoundingClientRect();
+          const frac = (clientX - r.left) / r.width;
+          const idx = Math.round(frac * (hours.length - 1));
+          setSel(Math.max(0, Math.min(hours.length - 1, idx)));
+        };
+
+        const tileStyle = "bg-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 text-white";
+        const tomorrow = s.daily[1];
+
+        return (
+          <div className="flex-1 flex flex-col p-6 space-y-5 pt-16 font-sans text-white relative" style={{ background: sky.grad, minHeight: '100%' }}>
+            {/* Radial glow background flourish */}
+            <div className="absolute -top-16 -right-12 w-48 h-48 rounded-full pointer-events-none opacity-40 blur-2xl"
+              style={{ background: `radial-gradient(circle, ${sky.accent}, transparent 70%)` }} />
+
+            <div className="flex justify-between items-start pt-2 z-10 relative">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">{s.place}</h1>
+                <p className="text-xs opacity-60 mt-0.5">{s.nowLabel} · {s.dateLabel}</p>
+                <div className="text-7xl font-thin tracking-tighter mt-4 leading-none">{fmt(s.tempC)}°</div>
+                <div className="text-sm font-semibold mt-2">{s.condLabel}</div>
+                <div className="text-xs opacity-60">Feels {fmt(s.feelsC)}° · H:{fmt(s.hiC)}° L:{fmt(s.loC)}°</div>
+              </div>
+              <div className="pt-2">
+                <WeatherIconDesign type={s.cond} size={90} color="#fff" accent={sky.accent} strokeWidth={1.2} />
+              </div>
+            </div>
+
+            {s.severe && (
+              <div className="bg-orange-500/20 border border-orange-400/30 rounded-2xl p-4 flex gap-3 items-start z-10">
+                <div className="w-8 h-8 rounded-lg bg-[color:var(--sky-accent)] text-amber-900 flex items-center justify-center font-bold text-lg flex-shrink-0">!</div>
+                <div>
+                  <h3 className="text-sm font-bold">{s.severe.title}</h3>
+                  <p className="text-xs opacity-80 mt-0.5">{s.severe.sub}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Scrub Graph Card */}
+            <div className={tileStyle + " z-10"}>
+              <div className="flex justify-between items-baseline mb-3">
+                <span className="text-xs font-bold tracking-wide uppercase opacity-80">{phrase.big}</span>
+                <span className="text-[10px] opacity-50 font-mono">Next 48h</span>
+              </div>
+
+              <div
+                ref={wrapRef}
+                className="relative touch-none select-none"
+                onPointerDown={(e) => {
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                  onScrub(e.clientX);
+                }}
+                onPointerMove={(e) => {
+                  if (e.buttons) onScrub(e.clientX);
+                }}
+                onPointerUp={(e) => {
+                  try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) {}
+                  setSel(null);
+                }}
+                onPointerCancel={(e) => {
+                  try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) {}
+                  setSel(null);
+                }}
+              >
+                <svg viewBox={`0 0 ${GW} ${GH}`} width="100%" height={GH} className="block overflow-visible">
+                  <defs>
+                    <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={sky.accent} stopOpacity="0.55" />
+                      <stop offset="100%" stopColor={sky.accent} stopOpacity="0.02" />
+                    </linearGradient>
+                  </defs>
+                  <line x1={padX} y1={GH - 18} stroke="rgba(255,255,255,0.18)" strokeWidth="1" x2={GW - padX} y2={GH - 18} />
+                  {firstWet > 0 && (
+                    <line x1={xs[firstWet]} y1="8" x2={xs[firstWet]} y2={GH - 18} stroke={sky.accent} strokeWidth="1" strokeDasharray="3 3" opacity="0.7" />
+                  )}
+                  <path d={areaPath} fill={`url(#${gradId})`} />
+                  <path d={linePath} fill="none" stroke={sky.accent} strokeWidth="2.5" strokeLinecap="round" />
+                  <path d={tpath} fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.6" strokeDasharray="1 4" strokeLinecap="round" />
+
+                  {sel !== null && (
+                    <g>
+                      <line x1={xs[sel]} y1={6} x2={xs[sel]} y2={GH - 18} stroke="#fff" strokeWidth="1" opacity="0.7" />
+                      <circle cx={xs[sel]} cy={iy(hours[sel].mm)} r="4.5" fill="#fff" />
+                      <circle cx={xs[sel]} cy={ty(hours[sel].t)} r="3" fill="#fff" opacity="0.85" />
+                    </g>
+                  )}
+                </svg>
+
+                {sel !== null && (
+                  <div
+                    className="absolute bg-neutral-900/80 border border-white/20 px-2.5 py-1 rounded-lg shadow-lg text-[10px] font-mono pointer-events-none z-50 text-white"
+                    style={{
+                      top: -12,
+                      left: `${(xs[sel] / GW) * 100}%`,
+                      transform: 'translateX(-50%)'
+                    }}
+                  >
+                    {hours[sel].label} · {fmt(hours[sel].t)}° · {hours[sel].mm > 0 ? `${convertPrecip(hours[sel].mm, precipUnit)} ${precipUnit}` : `${hours[sel].prob}%`}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-between mt-2 px-1 text-[9px] opacity-60 font-mono">
+                {hours.map((h, i) => (
+                  <span key={i} className="w-6 text-center">
+                    {i % 6 === 0 ? (i === 0 ? "Now" : h.label.replace(' ', '')) : ''}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Tomorrow Card */}
+            {tomorrow && (
+              <div className={tileStyle + " flex items-center gap-4 z-10"}>
+                <WeatherIconDesign type={tomorrow.cond} size={48} color="#fff" accent={sky.accent} strokeWidth={1.5} />
+                <div className="flex-1">
+                  <div className="text-[10px] opacity-60 font-bold uppercase tracking-wider">Tomorrow</div>
+                  <div className="text-base font-semibold mt-0.5">
+                    {tomorrow.note || (tomorrow.prob >= 50 ? 'Rain likely' : 'Dry')}
+                    {tomorrow.prob >= 20 && <span style={{ color: sky.accent }}>{` · ${tomorrow.prob}%`}</span>}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold">{fmt(tomorrow.hiC)}°</div>
+                  <div className="text-xs opacity-60">{fmt(tomorrow.loC)}°</div>
+                </div>
+              </div>
+            )}
+
+            {/* Atmosphere Stats Grid */}
+            <div className="grid grid-cols-2 gap-3 z-10">
+              <div className={tileStyle + " !p-4"}>
+                <div className="text-[10px] opacity-65 tracking-wider uppercase font-mono">Wind</div>
+                <div className="text-xl font-medium mt-1">{convertWindSpeed(s.windKmh / 3.6, windSpeedUnit)} {getWindUnitLabel(windSpeedUnit)}</div>
+                <div className="text-xs opacity-60 mt-0.5">{s.windDir} wind direction</div>
+              </div>
+              <div className={tileStyle + " !p-4"}>
+                <div className="text-[10px] opacity-65 tracking-wider uppercase font-mono">Humidity</div>
+                <div className="text-xl font-medium mt-1">{s.humidity}%</div>
+                <div className="text-xs opacity-60 mt-0.5">{s.humidity >= 70 ? 'Damp air' : 'Comfortable'}</div>
+              </div>
+              <div className={tileStyle + " !p-4"}>
+                <div className="text-[10px] opacity-65 tracking-wider uppercase font-mono">Sunrise</div>
+                <div className="text-xl font-medium mt-1">{s.sunrise}</div>
+                <div className="text-xs opacity-60 mt-0.5">Sunset {s.sunset}</div>
+              </div>
+              <div className={tileStyle + " !p-4"}>
+                <div className="text-[10px] opacity-65 tracking-wider uppercase font-mono">Feels Like</div>
+                <div className="text-xl font-medium mt-1">{fmt(s.feelsC)}°</div>
+                <div className="text-xs opacity-60 mt-0.5">{s.feelsC < s.tempC ? 'Cooler than air' : 'Warmer than air'}</div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // 4. Bold Design View (Stripe/Linear extreme typography style)
+      function HomeBold({ s, units, windSpeedUnit, precipUnit }) {
+        const sky = s.sky;
+        const fmt = (c) => convertTemp(c, units);
+        const fmtP = (mm) => convertPrecip(mm, precipUnit);
+        const phrase = precipPhrase(s);
+        const hours = s.hourly;
+        const [sel, setSel] = useState(0);
+        const scrollRef = useRef(null);
+
+        const BAR_W = 46;
+        const white = '#fff';
+        const dim = 'rgba(255,255,255,0.55)';
+
+        const firstWet = hours.findIndex((h) => h.mm > 0);
+        const lastWet = hours.reduce((a, h, i) => (h.mm > 0 ? i : a), -1);
+
+        const handleScroll = useCallback(() => {
+          if (!scrollRef.current) return;
+          const { scrollLeft, clientWidth } = scrollRef.current;
+          const first = Math.floor(scrollLeft / BAR_W);
+          const last = Math.floor((scrollLeft + clientWidth - 1) / BAR_W);
+          setSel(Math.min(Math.max(first, 0), Math.min(last, hours.length - 1)));
+        }, [hours.length]);
+
+        const panelStyle = "bg-black/25 backdrop-blur-xl border border-white/10 rounded-3xl p-5 shadow-lg text-white";
+        const tomorrow = s.daily[1];
+        const precipIcon = phrase.kind === 'none' ? s.cond : (s.precip.peakLabel === 'Heavy' || s.precip.peakLabel === 'Torrential' ? 'heavy' : 'rain');
+
+        return (
+          <div className="flex-1 flex flex-col p-6 space-y-4 pt-16 font-sans text-white relative" style={{ background: sky.grad, minHeight: '100%' }}>
+            <div className="flex items-start justify-between">
+              <div className="text-[120px] font-black tracking-tighter leading-none select-none">
+                {fmt(s.tempC)}<span className="text-5xl font-bold align-top mt-2 inline-block">°</span>
+              </div>
+              <div className="pt-4">
+                <WeatherIconDesign type={s.cond} size={66} color="#fff" accent={sky.accent} strokeWidth={1.5} />
+              </div>
+            </div>
+
+            <div className="flex gap-3 items-baseline -mt-3">
+              <div className="text-2xl font-extrabold tracking-tight uppercase">{s.condLabel}</div>
+              <div className="flex items-center gap-2 text-xs font-mono">
+                <span className="inline-flex items-center">
+                  <span className="text-[9px] font-bold text-orange-400 mr-1 uppercase">High</span>
+                  <span className="font-semibold">{fmt(s.hiC)}°</span>
+                </span>
+                <span className="opacity-30">·</span>
+                <span className="inline-flex items-center">
+                  <span className="text-[9px] font-bold text-sky-400 mr-1 uppercase">Low</span>
+                  <span className="font-semibold">{fmt(s.loC)}°</span>
+                </span>
+              </div>
+            </div>
+
+            {s.severe && (
+              <div className="bg-red-600 text-white rounded-2xl p-4 flex gap-3 items-start shadow-lg border border-red-500">
+                <span className="text-2xl font-black shrink-0">⚠</span>
+                <div>
+                  <h3 className="text-sm font-black tracking-wide uppercase">{s.severe.title}</h3>
+                  <p className="text-xs font-mono opacity-80 mt-1">{s.severe.sub}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Precip Large Alert Block */}
+            <div className="bg-black/30 border border-white/10 rounded-2xl p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono tracking-widest opacity-60 uppercase">
+                  {phrase.kind === 'none' ? 'No precipitation' : phrase.kind === 'active' ? 'Active Precip' : 'Incoming Storm'}
+                </span>
+                <WeatherIconDesign type={precipIcon} size={44} color="#fff" accent={sky.accent} strokeWidth={1.8} />
+              </div>
+              <div className="text-2xl font-extrabold tracking-tight mt-3">
+                {phrase.kind === 'soon' ? (
+                  <>Rain in <span style={{ color: sky.accent }}>{humanizeDur(s.precip.startsInMin ?? 0)}</span></>
+                ) : phrase.kind === 'active' ? (
+                  <>{s.precip.peakLabel ?? 'Heavy'} <span style={{ color: sky.accent }}>rain</span></>
+                ) : 'Clear Skies'}
+              </div>
+              <p className="text-xs opacity-75 font-mono mt-2 leading-relaxed">
+                {phrase.kind === 'none'
+                  ? 'Next 12 hours dry'
+                  : phrase.kind === 'active'
+                    ? `Easing by ${s.precip.endLabel} · ${fmtP(s.precip.peakMm ?? 0)} ${precipUnit}`
+                    : `${s.precip.startLabel} → ${s.precip.endLabel} · ${s.precip.peakLabel} · ${fmtP(s.precip.peakMm ?? 0)} ${precipUnit}`}
+              </p>
+            </div>
+
+            {/* Horizontal Hourly Bar Scroller */}
+            <div className="bg-black/35 rounded-2xl p-4 space-y-4">
+              <div className="flex justify-between items-baseline text-[10px] font-mono opacity-60">
+                <span>HOURLY TIMELINE · SCRUB</span>
+                <span>{hours.length}HRS · {precipUnit.toUpperCase()}</span>
+              </div>
+
+              <div className="relative">
+                <div ref={scrollRef} onScroll={handleScroll} className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none items-end">
+                  {hours.map((h, i) => {
+                    const norm = intensityNorm(h.mm);
+                    const wet = h.mm > 0;
+                    const probNorm = h.prob / 100;
+                    const inWindow = firstWet >= 0 && i >= firstWet && i <= lastWet;
+                    const active = i === sel;
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => setSel(i)}
+                        className={`flex-none w-9 flex flex-col items-center py-2.5 rounded-xl transition-all duration-150 ${active ? 'bg-white/15 text-white ring-1 ring-white/10' : 'text-neutral-400 hover:text-white'}`}
+                      >
+                        <span className="text-[10px] font-bold font-mono">{fmt(h.t)}°</span>
+                        <div className="w-full h-16 flex items-end justify-center my-2">
+                          <div
+                            className="w-2 rounded-full transition-all duration-300"
+                            style={{
+                              height: wet ? `${10 + norm * 90}%` : h.prob >= 20 ? `${4 + probNorm * 55}%` : '8%',
+                              backgroundColor: wet ? sky.accent : h.prob >= 20 ? `${sky.accent}77` : 'rgba(255,255,255,0.2)'
+                            }}
+                          />
+                        </div>
+                        <span className="text-[8px] font-mono opacity-60 uppercase">{i === 0 ? 'Now' : h.label.replace(' ', '').replace(':00', '')}</span>
+                        <span className="text-[8px] mt-1 text-white/40">
+                          <NavigationIcon size={8} style={{ transform: `rotate(${windDegToRotation(h.windDeg)}deg)` }} />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-white/10 flex justify-between items-center text-xs font-mono">
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-bold tracking-wider">{hours[sel]?.dayLabel.toUpperCase()} · {hours[sel]?.label.toUpperCase()}</span>
+                  <span className="text-[10px] opacity-60 flex items-center gap-1">
+                    <NavigationIcon size={10} style={{ transform: `rotate(${windDegToRotation(hours[sel]?.windDeg || 0)}deg)` }} />
+                    {convertWindSpeed(hours[sel]?.windMs || 0, windSpeedUnit)} {getWindUnitLabel(windSpeedUnit).toUpperCase()}
+                  </span>
+                </div>
+                <span className="text-[color:var(--sky-accent)] font-bold">
+                  {(hours[sel]?.mm || 0) > 0 ? `${hours[sel]?.intensity.toUpperCase()} · ${fmtP(hours[sel]?.mm || 0)} ${precipUnit.toUpperCase()}` : `DRY · ${hours[sel]?.prob || 0}%`}
+                </span>
+              </div>
+            </div>
+
+            {/* Banners for Today and Tomorrow */}
+            {s.daily[0] && (
+              <div className={panelStyle + " !p-4 flex items-center justify-between"}>
+                <div className="flex items-center gap-3">
+                  <WeatherIconDesign type={s.daily[0].cond} size={36} color="#fff" accent={sky.accent} strokeWidth={1.6} />
+                  <div>
+                    <div className="text-[10px] opacity-65 uppercase tracking-wider font-mono">Today</div>
+                    <div className="text-base font-bold uppercase mt-0.5">{s.daily[0].prob >= 50 ? 'Rain' : 'Dry'}</div>
+                  </div>
+                </div>
+                <div className="text-right font-mono text-base font-bold">
+                  {fmt(s.daily[0].hiC)}° <span className="text-white/40">/{fmt(s.daily[0].loC)}°</span>
+                </div>
+              </div>
+            )}
+
+            {tomorrow && (
+              <div className={panelStyle + " !p-4 flex items-center justify-between"}>
+                <div className="flex items-center gap-3">
+                  <WeatherIconDesign type={tomorrow.cond} size={36} color="#fff" accent={sky.accent} strokeWidth={1.6} />
+                  <div>
+                    <div className="text-[10px] opacity-65 uppercase tracking-wider font-mono">Tomorrow</div>
+                    <div className="text-base font-bold uppercase mt-0.5">{tomorrow.prob >= 50 ? 'Rain' : 'Dry'}</div>
+                  </div>
+                </div>
+                <div className="text-right font-mono text-base font-bold">
+                  {fmt(tomorrow.hiC)}° <span className="text-white/40">/{fmt(tomorrow.loC)}°</span>
+                </div>
+              </div>
+            )}
+
+            {/* Daily list */}
+            <div className="bg-black/35 rounded-2xl p-4 divide-y divide-white/5 font-mono text-xs">
+              {s.daily.slice(2).map((d, i) => (
+                <div key={i} className="flex justify-between items-center py-3">
+                  <span className="font-bold uppercase w-14">{d.day}</span>
+                  <WeatherIconDesign type={d.cond} size={18} color="#fff" accent={sky.accent} strokeWidth={1.5} />
+                  <span className="text-[10px] opacity-65 w-24 truncate">{d.note}</span>
+                  <span className="font-bold text-right w-16">{fmt(d.hiC)}° / <span className="opacity-50">{fmt(d.loC)}°</span></span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      // Main Skyline App Component
+      function SkylineApp() {
+        const [activeCityKey, setActiveCityKey] = useState("Zurich");
+        const [activeDesign, setActiveDesign] = useState("bold");
+        const [settings, setSettings] = useState({
+          tempUnit: "C",
+          theme: "dark",
+          windSpeedUnit: "m/s",
+          precipUnit: "mm/h",
+          clockFormat: "24h"
+        });
+
+        // Modals / Panels
+        const [showSearch, setShowSearch] = useState(false);
+        const [showSettings, setShowSettings] = useState(false);
+        const [activeWarning, setActiveWarning] = useState(null);
+
+        const activeCityData = CITIES_DATA[activeCityKey];
+        const s = adaptWeatherData(activeCityData, settings.clockFormat);
+
+        // Apply theme to simulated DOM
+        useEffect(() => {
+          const root = document.getElementById("phone-screen-root");
+          if (root) {
+            if (settings.theme === "dark") {
+              root.classList.add("dark-theme-vars");
+              root.style.setProperty("background-color", "#070a13");
+            } else {
+              root.classList.remove("dark-theme-vars");
+              root.style.setProperty("background-color", "#fdfcfb");
+            }
+          }
+        }, [settings.theme]);
+
+        const handleCityChange = (key) => {
+          setActiveCityKey(key);
+          setShowSearch(false);
+        };
+
+        const renderDesign = () => {
+          switch (activeDesign) {
+            case "classic":
+              return <HomeClassic s={s} units={settings.tempUnit} precipUnit={settings.precipUnit} />;
+            case "minimal":
+              return <HomeMinimal s={s} units={settings.tempUnit} precipUnit={settings.precipUnit} />;
+            case "atmospheric":
+              return <HomeAtmospheric s={s} units={settings.tempUnit} windSpeedUnit={settings.windSpeedUnit} precipUnit={settings.precipUnit} />;
+            case "bold":
+            default:
+              return <HomeBold s={s} units={settings.tempUnit} windSpeedUnit={settings.windSpeedUnit} precipUnit={settings.precipUnit} />;
+          }
+        };
+
+        return (
+          <div className="phone-screen flex flex-col select-none text-[color:var(--sky-fg)] relative" id="phone-screen-root">
+            {/* Top Bar / Status Bar */}
+            <div className="absolute top-2 left-0 right-0 px-6 flex justify-between items-center text-xs font-mono z-50 text-white mix-blend-difference pointer-events-none">
+              <span>9:41</span>
+              <div className="flex items-center gap-1.5">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                  <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.9-1.9C9.07 19.65 10.49 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm0-10c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z" />
+                </svg>
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                  <rect x="2" y="7" width="16" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="2" />
+                  <rect x="5" y="10" width="10" height="4" rx="1" />
+                  <path d="M20 10v4" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Custom weather warnings alert bar (floating at top under status bar) */}
+            {s.severe && (
+              <button
+                onClick={() => setActiveWarning(s.severe)}
+                className="absolute top-8 left-4 right-4 bg-red-600/90 text-white rounded-full py-1.5 px-4 flex items-center justify-between text-[11px] font-bold tracking-wide uppercase z-40 shadow-lg backdrop-blur-md animate-pulse"
+              >
+                <span className="flex items-center gap-1.5">
+                  <AlertTriangleIcon size={12} />
+                  {s.severe.title}
+                </span>
+                <span className="text-[9px] opacity-75">Tap &rarr;</span>
+              </button>
+            )}
+
+            {/* Weather app custom Header */}
+            <div className="absolute top-8 left-0 right-0 px-6 py-4 flex justify-between items-center z-30">
+              <button
+                onClick={() => setShowSearch(true)}
+                className="w-10 h-10 rounded-full bg-black/25 backdrop-blur-md border border-white/10 flex items-center justify-center text-white cursor-pointer hover:bg-black/35 transition"
+                aria-label="Search location"
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </button>
+
+              <div className="flex flex-col items-center">
+                <span className="text-[13px] font-bold tracking-widest text-white drop-shadow-md">{s.place.toUpperCase()}</span>
+              </div>
+
+              <button
+                onClick={() => setShowSettings(true)}
+                className="w-10 h-10 rounded-full bg-black/25 backdrop-blur-md border border-white/10 flex items-center justify-center text-white cursor-pointer hover:bg-black/35 transition"
+                aria-label="Settings"
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Core weather timeline view container */}
+            <div key={activeDesign} className="flex-1 overflow-y-auto scrollbar-none pb-20 animate-page-fade-in">
+              {renderDesign()}
+            </div>
+
+            {/* Design variant selector overlay buttons at bottom */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 flex bg-neutral-900/80 backdrop-blur-xl border border-white/10 rounded-full p-1 shadow-2xl">
+              {[
+                { key: 'classic', label: 'Classic' },
+                { key: 'minimal', label: 'Minimal' },
+                { key: 'atmospheric', label: 'Atmo' },
+                { key: 'bold', label: 'Bold' }
+              ].map(d => {
+                const active = activeDesign === d.key;
+                return (
+                  <button
+                    key={d.key}
+                    onClick={() => setActiveDesign(d.key)}
+                    className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase transition-all duration-150 ${active ? 'bg-white/20 text-white' : 'text-neutral-400 hover:text-neutral-200'}`}
+                  >
+                    {d.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Location Search Modal Overlay */}
+            {showSearch && (
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-xl flex flex-col pt-16 px-6 pb-6 z-50 text-white animate-fade-in">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold tracking-tight uppercase font-mono">Saved Locations</h2>
+                  <button
+                    onClick={() => setShowSearch(false)}
+                    className="p-1 rounded-full bg-white/10 hover:bg-white/20 transition"
+                  >
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="space-y-3 overflow-y-auto flex-1 scrollbar-none">
+                  {Object.keys(CITIES_DATA).map(key => {
+                    const c = CITIES_DATA[key];
+                    const active = activeCityKey === key;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => handleCityChange(key)}
+                        className={`w-full text-left p-4 rounded-2xl border flex justify-between items-center transition ${active ? 'bg-white/15 border-white/30' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
+                      >
+                        <div>
+                          <div className="font-extrabold text-lg">{c.city}</div>
+                          <div className="text-xs opacity-60 mt-0.5">{c.timeZone}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-light">{convertTemp(c.current.temp, settings.tempUnit)}°</div>
+                          <div className="text-xs opacity-70 mt-0.5">{c.current.description}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Settings Overlay Drawer */}
+            {showSettings && (
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-xl flex flex-col pt-16 px-6 pb-6 z-50 text-white animate-slide-in">
+                <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-xl font-bold tracking-tight uppercase font-mono">Settings</h2>
+                  <button
+                    onClick={() => setShowSettings(false)}
+                    className="p-1 rounded-full bg-white/10 hover:bg-white/20 transition"
+                  >
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="space-y-6 flex-1 overflow-y-auto scrollbar-none">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest font-mono">Temperature Unit</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {["C", "F"].map(unit => (
+                        <button
+                          key={unit}
+                          onClick={() => setSettings(prev => ({ ...prev, tempUnit: unit }))}
+                          className={`py-2 rounded-xl text-xs font-bold transition ${settings.tempUnit === unit ? 'bg-white/15 border border-white/25 text-white' : 'bg-white/5 border border-white/5 text-neutral-400'}`}
+                        >
+                          {unit === "C" ? "Celsius (°C)" : "Fahrenheit (°F)"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest font-mono">Visual Theme</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {["dark", "light"].map(theme => (
+                        <button
+                          key={theme}
+                          onClick={() => setSettings(prev => ({ ...prev, theme }))}
+                          className={`py-2 rounded-xl text-xs font-bold uppercase transition ${settings.theme === theme ? 'bg-white/15 border border-white/25 text-white' : 'bg-white/5 border border-white/5 text-neutral-400'}`}
+                        >
+                          {theme}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest font-mono">Clock Format</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {["12h", "24h"].map(format => (
+                        <button
+                          key={format}
+                          onClick={() => setSettings(prev => ({ ...prev, clockFormat: format }))}
+                          className={`py-2 rounded-xl text-xs font-bold uppercase transition ${settings.clockFormat === format ? 'bg-white/15 border border-white/25 text-white' : 'bg-white/5 border border-white/5 text-neutral-400'}`}
+                        >
+                          {format === "12h" ? "12-Hour" : "24-Hour"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest font-mono">Wind Speed Units</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {["m/s", "kph", "mph", "knots"].map(unit => (
+                        <button
+                          key={unit}
+                          onClick={() => setSettings(prev => ({ ...prev, windSpeedUnit: unit }))}
+                          className={`py-2 rounded-xl text-[10px] font-bold uppercase transition ${settings.windSpeedUnit === unit ? 'bg-white/15 border border-white/25 text-white' : 'bg-white/5 border border-white/5 text-neutral-400'}`}
+                        >
+                          {unit}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest font-mono">Precipitation Units</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {["mm/h", "cm/h", "in/h"].map(unit => (
+                        <button
+                          key={unit}
+                          onClick={() => setSettings(prev => ({ ...prev, precipUnit: unit }))}
+                          className={`py-2 rounded-xl text-[10px] font-bold uppercase transition ${settings.precipUnit === unit ? 'bg-white/15 border border-white/25 text-white' : 'bg-white/5 border border-white/5 text-neutral-400'}`}
+                        >
+                          {unit}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-auto border-t border-white/10 pt-4 text-[10px] font-mono text-neutral-500 text-center uppercase tracking-widest">
+                  Skyline Weather App Redesign v2.0
+                </div>
+              </div>
+            )}
+
+            {/* Warnings Detail Modal */}
+            {activeWarning && (
+              <div
+                onClick={() => setActiveWarning(null)}
+                className="absolute inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-6 z-[60]"
+              >
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-neutral-900 border border-white/10 w-full rounded-3xl p-6 shadow-2xl max-h-[70%] flex flex-col overflow-hidden text-white"
+                >
+                  <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
+                    <div className="flex items-center gap-2 text-red-500">
+                      <AlertTriangleIcon size={18} />
+                      <span className="text-xs font-black tracking-wider uppercase font-mono">
+                        Active Alert
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setActiveWarning(null)}
+                      className="p-1 rounded-full bg-white/10 text-white hover:bg-white/20 transition"
+                    >
+                      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto pt-4 space-y-4 pr-1 scrollbar-none">
+                    <h4 className="text-red-500 font-extrabold text-base leading-tight uppercase font-sans">
+                      {activeWarning.title}
+                    </h4>
+                    <p className="text-[10px] font-mono opacity-50">
+                      {activeWarning.detail}
+                    </p>
+                    <div className="text-xs leading-relaxed opacity-90 pt-3 border-t border-white/5 whitespace-pre-wrap">
+                      {activeWarning.sub}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById("app-root"));
+      root.render(<SkylineApp />);
+    </script>
+  </body>
+</html>

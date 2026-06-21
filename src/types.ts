@@ -114,6 +114,7 @@ export interface UserSettings {
   theme: 'system' | 'dark' | 'light';
   tempUnit: 'C' | 'F';
   windSpeedUnit: 'm/s' | 'kph' | 'mph' | 'knots';
+  precipUnit: 'mm/h' | 'cm/h' | 'in/h';
   clockFormat: '12h' | '24h';
   showSunriseSunset: boolean;
   showMoonriseMoonset: boolean;

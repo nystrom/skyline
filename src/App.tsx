@@ -7,15 +7,15 @@ import { useState, useEffect, useRef } from 'react';
 import { UserSettings, WeatherData, WeatherProvider, SavedLocation, DataSource, WeatherWarning } from './types';
 import { fetchWeatherForLocation } from './services/weather/weatherOrchestrator';
 import { geocodeLocation } from './services/geocoding/geocodingService';
+import { reverseGeocode } from './utils/weatherFetcher';
 import { isApiKeyValid } from './services/validation';
-import { geocodedToSaved, locationId } from './utils/savedLocation';
+import { geocodedToSaved } from './utils/savedLocation';
 import { WeatherHeader } from './components/WeatherHeader';
-import { DailyScroller } from './components/DailyScroller';
 import { formatTimeAtLocation } from './utils/unitConverter';
-import { WeatherTimeline } from './components/WeatherTimeline';
 import { WeatherIcon } from './components/WeatherIcon';
 import { AnimatePresence, motion } from 'motion/react';
 import { AlertTriangle, X } from 'lucide-react';
+import { DesignView } from './components/designs/DesignView';
 
 const ACTIVE_LOCATION_KEY = 'sky_timeline_active_location';
 const THEME_KEY = 'sky_timeline_theme';
@@ -48,27 +48,20 @@ function loadActiveLocation(): SavedLocation | undefined {
   return undefined;
 }
 
-function defaultLocation(city: string): SavedLocation {
-  return {
-    id: locationId(0, 0),
-    label: city,
-    lat: 0,
-    lon: 0,
-  };
-}
-
 export default function App() {
   const [settings, setSettings] = useState<UserSettings>(() => {
     const envKey =
       (import.meta as { env?: { VITE_OPENWEATHER_API_KEY?: string } }).env?.VITE_OPENWEATHER_API_KEY ||
       '';
     const savedKey = localStorage.getItem('sky_timeline_openweather_key') || envKey;
-    const savedCity = localStorage.getItem('sky_timeline_city') || 'Zurich';
+    const savedCity = localStorage.getItem('sky_timeline_city') || '';
     const savedUnits = (localStorage.getItem('sky_timeline_units') as 'metric' | 'imperial') || 'metric';
     const savedProvider = (localStorage.getItem('sky_timeline_provider') as WeatherProvider) || 'auto';
     const savedTempUnit = (localStorage.getItem('sky_timeline_temp_unit') as 'C' | 'F') || 'C';
     const savedWindSpeedUnit =
       (localStorage.getItem('sky_timeline_wind_speed_unit') as 'm/s' | 'kph' | 'mph' | 'knots') || 'm/s';
+    const savedPrecipUnit =
+      (localStorage.getItem('sky_timeline_precip_unit') as 'mm/h' | 'cm/h' | 'in/h') || 'mm/h';
     const savedClockFormat = (localStorage.getItem('sky_timeline_clock_format') as '12h' | '24h') || '24h';
     const savedShowSunriseSunset = localStorage.getItem('sky_timeline_show_sunrise_sunset') !== 'false';
     const savedShowMoonriseMoonset = localStorage.getItem('sky_timeline_show_moonrise_moonset') !== 'false';
@@ -79,7 +72,7 @@ export default function App() {
       return Math.min(120, Math.max(1, n));
     })();
     const savedTheme = (localStorage.getItem(THEME_KEY) as UserSettings['theme']) || 'system';
-    const activeLocation = loadActiveLocation() ?? defaultLocation(savedCity);
+    const activeLocation = loadActiveLocation();
 
     return {
       apiKey: savedKey,
@@ -90,6 +83,7 @@ export default function App() {
       theme: savedTheme,
       tempUnit: savedTempUnit,
       windSpeedUnit: savedWindSpeedUnit,
+      precipUnit: savedPrecipUnit,
       clockFormat: savedClockFormat,
       showSunriseSunset: savedShowSunriseSunset,
       showMoonriseMoonset: savedShowMoonriseMoonset,
@@ -104,29 +98,9 @@ export default function App() {
   const [fetchWarnings, setFetchWarnings] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [activeDayIdx, setActiveDayIdx] = useState(0);
   const [selectedWarnings, setSelectedWarnings] = useState<WeatherWarning[] | null>(null);
   const loadAbortRef = useRef<AbortController | null>(null);
-  const scrollSpyBlockedRef = useRef(false);
-  const topStackRef = useRef<HTMLDivElement>(null);
-  const scrollToNowAfterRender = useRef(false);
-
-  const blockScrollSpy = (ms = 700) => {
-    scrollSpyBlockedRef.current = true;
-    window.setTimeout(() => {
-      scrollSpyBlockedRef.current = false;
-    }, ms);
-  };
-
-  const resetToFirstDay = (ms = 300) => {
-    blockScrollSpy(ms);
-    setActiveDayIdx(0);
-    requestAnimationFrame(() => {
-      const scrollContainer = document.getElementById('weather-timeline-container');
-      if (!scrollContainer) return;
-      scrollContainer.scrollTo({ top: 0, behavior: 'auto' });
-    });
-  };
+  const geolocatedRef = useRef(false);
 
   const updateSettings = (newSettings: Partial<UserSettings>) => {
     setSettings((prev) => {
@@ -152,6 +126,9 @@ export default function App() {
       }
       if (newSettings.windSpeedUnit !== undefined) {
         localStorage.setItem('sky_timeline_wind_speed_unit', updated.windSpeedUnit);
+      }
+      if (newSettings.precipUnit !== undefined) {
+        localStorage.setItem('sky_timeline_precip_unit', updated.precipUnit);
       }
       if (newSettings.clockFormat !== undefined) {
         localStorage.setItem('sky_timeline_clock_format', updated.clockFormat);
@@ -192,70 +169,54 @@ export default function App() {
     return () => legacy.removeListener(onChange);
   }, [settings.theme]);
 
+  // On first load with no saved location, try geolocation
+  useEffect(() => {
+    if (geolocatedRef.current) return;
+    if (settings.activeLocation) return;
+    geolocatedRef.current = true;
+
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const rev = await reverseGeocode(latitude, longitude, settings.apiKey);
+          const loc = rev
+            ? geocodedToSaved(rev)
+            : {
+                id: `${latitude.toFixed(4)},${longitude.toFixed(4)}`,
+                label: `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+                lat: latitude,
+                lon: longitude,
+              };
+          updateSettings({ activeLocation: loc, city: loc.label });
+        } catch {
+          const loc: SavedLocation = {
+            id: `${latitude.toFixed(4)},${longitude.toFixed(4)}`,
+            label: `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+            lat: latitude,
+            lon: longitude,
+          };
+          updateSettings({ activeLocation: loc, city: loc.label });
+        }
+      },
+      () => {
+        // Geolocation denied — fall back to a sensible default
+        const fallback: SavedLocation = {
+          id: '47.3769,8.5417',
+          label: 'Zurich',
+          lat: 47.3769,
+          lon: 8.5417,
+          country: 'CH',
+        };
+        updateSettings({ activeLocation: fallback, city: fallback.label });
+      }
+    );
+  }, []);
+
   const handleRefresh = () => {
     loadWeatherData();
-  };
-
-  useEffect(() => {
-    if (!scrollToNowAfterRender.current) return;
-    scrollToNowAfterRender.current = false;
-    blockScrollSpy(500);
-    setTimeout(() => {
-      const scrollContainer = document.getElementById('weather-timeline-container');
-      if (!scrollContainer) return;
-
-      const now = new Date();
-      const targetHour = Math.max(0, now.getHours() - 1);
-      const targetDate = new Date();
-      targetDate.setHours(targetHour, 0, 0, 0);
-      const targetId = `timeline-hour-row-${targetDate.getFullYear()}-${targetDate.getMonth()}-${targetDate.getDate()}-${targetDate.getHours()}`;
-
-      const element = document.getElementById(targetId) || document.getElementById('timeline-event-now');
-      if (!element) return;
-
-      const containerTop = scrollContainer.getBoundingClientRect().top;
-      const elementTop = element.getBoundingClientRect().top;
-      const pinned = readTopStackHeight(scrollContainer);
-      const targetTop = elementTop - containerTop + scrollContainer.scrollTop - pinned;
-      scrollContainer.scrollTo({ top: Math.max(0, targetTop), behavior: 'auto' });
-    }, 100);
-  }, [weatherData]);
-
-  const readTopStackHeight = (scrollContainer: HTMLElement): number => {
-    const raw = getComputedStyle(scrollContainer).getPropertyValue('--sky-top-stack-h').trim();
-    const n = Number.parseFloat(raw.replace('px', ''));
-    if (Number.isFinite(n) && n > 0) return n;
-
-    const topStack = document.getElementById('weather-top-stack');
-    if (topStack) {
-      return Math.round(topStack.getBoundingClientRect().height);
-    }
-    return 0;
-  };
-
-  const handleSelectNow = () => {
-    blockScrollSpy(500);
-    setActiveDayIdx(0);
-    setTimeout(() => {
-      const scrollContainer = document.getElementById('weather-timeline-container');
-      if (!scrollContainer) return;
-
-      const now = new Date();
-      const targetHour = Math.max(0, now.getHours() - 1);
-      const targetDate = new Date();
-      targetDate.setHours(targetHour, 0, 0, 0);
-      const targetId = `timeline-hour-row-${targetDate.getFullYear()}-${targetDate.getMonth()}-${targetDate.getDate()}-${targetDate.getHours()}`;
-
-      const element = document.getElementById(targetId) || document.getElementById('timeline-event-now');
-      if (!element) return;
-
-      const containerTop = scrollContainer.getBoundingClientRect().top;
-      const elementTop = element.getBoundingClientRect().top;
-      const pinned = readTopStackHeight(scrollContainer);
-      const targetTop = elementTop - containerTop + scrollContainer.scrollTop - pinned;
-
-      scrollContainer.scrollTo({ top: Math.max(0, targetTop), behavior: 'auto' });
-    }, 100);
   };
 
   const resolveLocationForFetch = async (signal: AbortSignal): Promise<SavedLocation> => {
@@ -263,8 +224,11 @@ export default function App() {
     if (active && active.lat !== 0 && active.lon !== 0) {
       return active;
     }
-    const geocoded = await geocodeLocation(settings.city, settings.apiKey, signal);
-    return geocodedToSaved(geocoded);
+    if (settings.city) {
+      const geocoded = await geocodeLocation(settings.city, settings.apiKey, signal);
+      return geocodedToSaved(geocoded);
+    }
+    throw new Error('No location set. Tap the location name to search.');
   };
 
   const loadWeatherData = async () => {
@@ -297,10 +261,8 @@ export default function App() {
       if (locationChanged) {
         updateSettings({ activeLocation: location, city: location.label });
       }
-      scrollToNowAfterRender.current = true;
       setDataSource(result.source === 'cached' ? 'cached' : 'live');
       setFetchWarnings(result.warnings);
-      setActiveDayIdx(0);
     } catch (err: unknown) {
       if (controller.signal.aborted) return;
       console.error(err);
@@ -319,6 +281,7 @@ export default function App() {
   };
 
   useEffect(() => {
+    if (!settings.activeLocation && !settings.city) return;
     loadWeatherData();
     return () => loadAbortRef.current?.abort();
   }, [
@@ -340,28 +303,6 @@ export default function App() {
 
   const displayData = weatherData ?? lastLiveData;
 
-  useEffect(() => {
-    if (!displayData) return;
-    resetToFirstDay(300);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [displayData?.daily?.length, displayData?.city]);
-
-  useEffect(() => {
-    const container = document.getElementById('weather-timeline-container');
-    const topStack = topStackRef.current;
-    if (!container || !topStack) return;
-
-    const apply = () => {
-      const h = Math.round(topStack.getBoundingClientRect().height);
-      container.style.setProperty('--sky-top-stack-h', `${h}px`);
-    };
-
-    apply();
-    const ro = new ResizeObserver(() => apply());
-    ro.observe(topStack);
-    return () => ro.disconnect();
-  }, [displayData?.lat, displayData?.lon]);
-
   return (
     <div
       id="app-root-container"
@@ -378,39 +319,23 @@ export default function App() {
               key={`${displayData.lat},${displayData.lon}`}
               className="flex-1 min-h-0 overflow-y-auto scrollbar-none relative z-10"
             >
-              <div id="weather-top-stack" ref={topStackRef} className="sticky top-0 z-30">
-                <WeatherHeader
-                  weatherData={displayData}
-                  settings={settings}
-                  updateSettings={updateSettings}
-                  isLoading={isLoading}
-                  onRefresh={handleRefresh}
-                  errorMsg={errorMsg}
-                  fetchWarnings={fetchWarnings}
-                  onDismissError={() => setErrorMsg(null)}
-                  onDismissWarnings={() => setFetchWarnings([])}
-                  dataSource={dataSource}
-                  onSelectNow={handleSelectNow}
-                  onShowWarnings={(warnings) => setSelectedWarnings(warnings)}
-                />
-                <DailyScroller
-                  daily={displayData.daily}
-                  selectedDayIdx={activeDayIdx}
-                  onSelectDay={setActiveDayIdx}
-                  onBeforeTimelineScroll={blockScrollSpy}
-                  settings={settings}
-                />
+              <div className="relative">
+                <DesignView weatherData={displayData} settings={settings} design="minimal" />
+                <div className="absolute top-0 left-0 right-0 z-50">
+                  <WeatherHeader
+                    weatherData={displayData}
+                    settings={settings}
+                    updateSettings={updateSettings}
+                    isLoading={isLoading}
+                    onRefresh={handleRefresh}
+                    errorMsg={null}
+                    dataSource={dataSource}
+                    onSelectNow={() => {}}
+                    onShowWarnings={(warnings) => setSelectedWarnings(warnings)}
+                    overlayMode
+                  />
+                </div>
               </div>
-              <WeatherTimeline
-                daily={displayData.daily}
-                settings={settings}
-                activeDayIdx={activeDayIdx}
-                onActiveDayChange={setActiveDayIdx}
-                scrollSpyBlockedRef={scrollSpyBlockedRef}
-                timeZone={displayData.timeZone}
-                timeZoneOffsetMinutes={displayData.timeZoneOffsetMinutes}
-                onShowWarnings={(warnings) => setSelectedWarnings(warnings)}
-              />
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[400px]">
@@ -461,7 +386,7 @@ export default function App() {
                       <X size={18} />
                     </button>
                   </div>
-                  
+
                   <div className="flex-1 overflow-y-auto pt-4 space-y-4 pr-1 scrollbar-none">
                     {selectedWarnings.map((w, idx) => (
                       <div key={idx} className="bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-2xl p-4 space-y-2">

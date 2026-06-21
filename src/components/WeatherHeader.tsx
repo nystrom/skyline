@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { WeatherData, UserSettings, DataSource, WeatherWarning } from '../types';
 import { WeatherIcon } from './WeatherIcon';
 import { Settings, Info, RefreshCw, X, Check, AlertTriangle, ChevronDown } from 'lucide-react';
+import type { DesignVariant } from './designs/DesignView';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   convertTemp,
@@ -33,6 +34,9 @@ interface WeatherHeaderProps {
   dataSource: DataSource;
   onSelectNow?: () => void;
   onShowWarnings?: (warnings: WeatherWarning[]) => void;
+  activeDesign?: DesignVariant | 'classic';
+  onDesignChange?: (v: DesignVariant | 'classic') => void;
+  overlayMode?: boolean;
 }
 
 export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
@@ -48,6 +52,9 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
   dataSource,
   onSelectNow,
   onShowWarnings,
+  activeDesign = 'classic',
+  onDesignChange,
+  overlayMode = false,
 }) => {
   const tz = {
     timeZone: weatherData.timeZone,
@@ -179,49 +186,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
     country: settings.activeLocation?.country ?? weatherData.country,
   });
 
-  const windDegToCompass = (deg: number): string => {
-    const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-    return dirs[Math.round(deg / 45) % 8];
-  };
 
-  const rainChip = (): { label: string; value: string } => {
-    const today = weatherData.daily[0];
-    const now = new Date();
-    const isCurrentlyRaining = current.iconName.includes('rain') || current.precipProb >= 60;
-    const accum = convertPrecipAccum(current.precipAccum ?? 0, settings.tempUnit);
-
-    if (isCurrentlyRaining) {
-      return { label: 'RAIN NOW', value: `${current.precipProb}% (${accum})` };
-    }
-
-    if (today) {
-      const upcoming = today.timelineEvents
-        .filter(e => e.type === 'hourly_status')
-        .filter(e => e.time.getTime() > now.getTime())
-        .find(e => (e.precipProb ?? 0) >= 50 || e.iconName.includes('rain'));
-
-      if (upcoming) {
-        const timeStr = formatTimeAtLocation(upcoming.time, '24h', tz);
-        return { label: `RAIN BY ${timeStr}`, value: `${upcoming.precipProb ?? 0}% (${accum})` };
-      }
-    }
-
-    return { label: 'PRECIPITATION', value: `${current.precipProb}% (${accum})` };
-  };
-
-  const windChip = (): { label: string; value: string } => {
-    const compass = windDegToCompass(current.windDeg);
-    const speed = convertWindSpeed(current.windSpeed, settings.windSpeedUnit);
-    return {
-      label: 'WIND',
-      value: `${speed} ${settings.windSpeedUnit}`,
-    };
-  };
-
-  const humidityChip = (): { label: string; value: string } => ({
-    label: 'HUMIDITY',
-    value: `${current.humidity}%`,
-  });
 
   const buildDescription = (): string => {
     const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -231,37 +196,50 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
     return `${desc}. ${cap(upcoming)}`;
   };
 
-  const chips = [rainChip(), humidityChip(), windChip()];
 
   const headerStyle = conditionCardStyle(current.iconName, current.description, current.kind);
 
   return (
     <div
       id="weather-header-container"
-      className="w-full shrink-0 relative border-b border-[color:var(--sky-border)]"
-      style={headerStyle}
+      className={overlayMode
+        ? 'w-full shrink-0 relative'
+        : 'w-full shrink-0 relative border-b border-[color:var(--sky-border)]'}
+      style={overlayMode ? undefined : headerStyle}
     >
       {/* TOP BAR: location · time + controls */}
-      <div className="flex items-center justify-between px-4 pt-3">
+      <div className={overlayMode
+        ? 'flex items-center justify-between px-6 pt-[10px] pb-0'
+        : 'flex items-center justify-between px-4 pt-3'}>
         <button
           onClick={handleToggleLocations}
-          className="flex items-center gap-1 sky-mono text-[13px] font-bold tracking-wider uppercase text-[color:var(--sky-dim)] hover:text-[color:var(--sky-muted)] transition-colors cursor-pointer"
+          className={overlayMode
+            ? 'flex items-center gap-[5px] text-[16px] font-medium text-white/[0.96] hover:text-white transition-colors cursor-pointer drop-shadow leading-none tracking-[-0.3px]'
+            : 'flex items-center gap-1 sky-mono text-[13px] font-bold tracking-wider uppercase text-[color:var(--sky-dim)] hover:text-[color:var(--sky-muted)] transition-colors cursor-pointer'}
           aria-label="Change location"
         >
+          {overlayMode && (
+            <svg width="10" height="13" viewBox="0 0 10 13" fill="rgba(255,255,255,0.58)" style={{ flexShrink: 0 }}>
+              <path d="M5 0C2.24 0 0 2.24 0 5c0 3.75 5 8 5 8s5-4.25 5-8c0-2.76-2.24-5-5-5zm0 6.8A1.8 1.8 0 115 3.2 1.8 1.8 0 015 6.8z" />
+            </svg>
+          )}
           <span>{headerLocationLabel}</span>
-          <ChevronDown size={14} className="opacity-70 mt-[-1px] shrink-0" />
-          <span className="opacity-40 font-normal px-0.5">·</span>
-          <span className="font-medium opacity-80">{formattedTime}</span>
+          {overlayMode
+            ? <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', marginTop: 1 }}>▼</span>
+            : <ChevronDown size={14} className="opacity-70 mt-[-1px] shrink-0" />}
         </button>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           {isLoading && (
-            <RefreshCw size={13} className="text-[color:var(--sky-dim)] animate-spin" />
+            <RefreshCw size={13} className={overlayMode ? 'text-white/60 animate-spin' : 'text-[color:var(--sky-dim)] animate-spin'} />
           )}
           <button
             onClick={handleToggleSettings}
             aria-expanded={showSettings}
             aria-label="Settings"
-            className="p-1.5 rounded-lg text-[color:var(--sky-dim)] hover:text-[color:var(--sky-muted)] hover:bg-[color:var(--sky-card)] transition-colors cursor-pointer"
+            className={overlayMode
+              ? 'flex items-center justify-center rounded-full text-white/75 hover:text-white hover:bg-white/20 transition-colors cursor-pointer drop-shadow'
+              : 'p-1.5 rounded-lg text-[color:var(--sky-dim)] hover:text-[color:var(--sky-muted)] hover:bg-[color:var(--sky-card)] transition-colors cursor-pointer'}
+            style={overlayMode ? { width: 34, height: 34, background: 'rgba(255,255,255,0.12)' } : undefined}
           >
             <Settings size={15} />
           </button>
@@ -359,7 +337,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
                 <select
                   value={draftSettings.windSpeedUnit}
                   onChange={(e) => setDraftSettings(prev => ({ ...prev, windSpeedUnit: e.target.value as any }))}
-                  className="bg-white/10 border border-white/15 rounded-xl text-sm sky-mono px-3 py-1.5 text-white focus:outline-none cursor-pointer"
+                  className="bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-xl text-sm sky-mono px-3 py-1.5 text-[color:var(--sky-fg)] focus:outline-none cursor-pointer"
                 >
                   <option value="m/s">m/s</option>
                   <option value="kph">kph</option>
@@ -369,11 +347,24 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
               </div>
 
               <div className="flex items-center justify-between text-sm">
+                <span className="text-[color:var(--sky-muted)] font-medium">Precip</span>
+                <select
+                  value={draftSettings.precipUnit}
+                  onChange={(e) => setDraftSettings(prev => ({ ...prev, precipUnit: e.target.value as any }))}
+                  className="bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-xl text-sm sky-mono px-3 py-1.5 text-[color:var(--sky-fg)] focus:outline-none cursor-pointer"
+                >
+                  <option value="mm/h">mm/h</option>
+                  <option value="cm/h">cm/h</option>
+                  <option value="in/h">in/h</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-between text-sm">
                 <span className="text-[color:var(--sky-muted)] font-medium">Auto refresh</span>
                 <select
                   value={draftSettings.refreshIntervalMinutes}
                   onChange={(e) => setDraftSettings(prev => ({ ...prev, refreshIntervalMinutes: Number.parseInt(e.target.value, 10) }))}
-                  className="bg-white/10 border border-white/15 rounded-xl text-sm sky-mono px-3 py-1.5 text-white focus:outline-none cursor-pointer"
+                  className="bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-xl text-sm sky-mono px-3 py-1.5 text-[color:var(--sky-fg)] focus:outline-none cursor-pointer"
                   aria-label="Forecast auto refresh interval"
                 >
                   <option value={5}>5 min</option>
@@ -427,7 +418,7 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
                     <select
                       value={draftSettings.provider}
                       onChange={(e) => setDraftSettings(prev => ({ ...prev, provider: e.target.value as any }))}
-                      className="bg-white/10 border border-white/15 rounded-xl text-sm sky-mono px-3 py-1.5 text-white focus:outline-none cursor-pointer"
+                      className="bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-xl text-sm sky-mono px-3 py-1.5 text-[color:var(--sky-fg)] focus:outline-none cursor-pointer"
                     >
                       <option value="auto">Auto (Keyless)</option>
                       <option value="openweather">OpenWeather</option>
@@ -520,63 +511,100 @@ export const WeatherHeader: React.FC<WeatherHeaderProps> = ({
         </div>
       )}
 
-      {/* HERO: big temperature + icon */}
-      <div
-        onClick={onSelectNow}
-        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelectNow?.()}
-        role="button"
-        tabIndex={0}
-        className="px-4 pt-1.5 pb-2.5 flex items-end gap-3 cursor-pointer"
-        aria-label="Jump to current conditions"
-      >
-        <div className="text-[76px] leading-none font-black tracking-tighter sky-title text-[color:var(--sky-fg)] tabular-nums">
-          {convertTemp(current.temp, settings.tempUnit)}°
-        </div>
-        <div className="flex flex-col gap-0.5 pb-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <WeatherIcon name={current.iconName} size={64} className="text-amber-400" />
-            {current.warnings && current.warnings.length > 0 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onShowWarnings?.(current.warnings || []);
-                }}
-                className="text-red-500 hover:text-red-400 cursor-pointer animate-pulse focus:outline-none flex items-center justify-center p-1 rounded-full hover:bg-red-500/10 transition-colors"
-                aria-label="Show active warnings"
-              >
-                <AlertTriangle size={24} />
-              </button>
-            )}
-          </div>
-          <p className="text-[15px] font-bold text-[color:var(--sky-muted)] leading-tight">
-            {buildDescription()}
-          </p>
-        </div>
-      </div>
-
-      {/* Stat chips */}
-      <div className="px-4 pb-4 flex gap-2">
-        {chips.map(({ label, value }) => (
+      {!overlayMode && (
+        <>
+          {/* HERO: temperature left, icon right */}
           <div
-            key={label}
-            className="flex-1 bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-xl px-2.5 py-2"
+            onClick={onSelectNow}
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelectNow?.()}
+            role="button"
+            tabIndex={0}
+            className="px-4 pt-1.5 pb-2 flex items-center justify-between cursor-pointer"
+            aria-label="Jump to current conditions"
           >
-            <div className="text-[9px] font-bold tracking-widest uppercase sky-mono text-[color:var(--sky-dim)] leading-none mb-1">
-              {label}
-            </div>
-            <div className="flex items-center gap-1 text-[13px] font-bold sky-mono text-[color:var(--sky-fg)]">
-              {label.startsWith('WIND') && (
-                <WindDirectionArrow
-                  deg={current.windSpeed <= 0 ? 0 : current.windDeg}
-                  size={10}
-                  transition
-                />
+            <div className="flex flex-col min-w-0">
+              <div className="text-[80px] leading-none font-black tracking-tighter sky-title text-[color:var(--sky-fg)] tabular-nums">
+                {convertTemp(current.temp, settings.tempUnit)}°
+              </div>
+              {weatherData.daily[0] && (
+                <div className="flex items-center gap-3 mt-0.5">
+                  <span className="sky-mono text-[13px]">
+                    <span className="text-[9px] font-bold tracking-widest uppercase text-orange-400 mr-1">High</span>
+                    <span className="font-bold text-[color:var(--sky-fg)]">{convertTemp(weatherData.daily[0].tempMax, settings.tempUnit)}°</span>
+                  </span>
+                  <span className="sky-mono text-[13px]">
+                    <span className="text-[9px] font-bold tracking-widest uppercase text-sky-400 mr-1">Low</span>
+                    <span className="font-bold text-[color:var(--sky-fg)]">{convertTemp(weatherData.daily[0].tempMin, settings.tempUnit)}°</span>
+                  </span>
+                </div>
               )}
-              {value}
+              <p className="text-[14px] font-bold text-[color:var(--sky-muted)] leading-tight mt-1 max-w-[220px]">
+                {buildDescription()}
+              </p>
+            </div>
+            <div className="flex flex-col items-center gap-1 shrink-0 pl-3">
+              <WeatherIcon name={current.iconName} size={72} className="text-amber-400" />
+              {current.warnings && current.warnings.length > 0 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShowWarnings?.(current.warnings || []);
+                  }}
+                  className="text-red-500 hover:text-red-400 cursor-pointer animate-pulse focus:outline-none flex items-center justify-center p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                  aria-label="Show active warnings"
+                >
+                  <AlertTriangle size={20} />
+                </button>
+              )}
             </div>
           </div>
-        ))}
-      </div>
+
+          {/* Stat chips – two rows */}
+          <div className="px-4 pb-4 flex flex-col gap-2">
+            {/* Row 1: chance, rate, wind */}
+            <div className="flex gap-2">
+              <div className="flex-1 bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-xl px-2.5 py-2">
+                <div className="text-[9px] font-bold tracking-widest uppercase sky-mono text-[color:var(--sky-dim)] leading-none mb-1">Chance</div>
+                <div className="text-[13px] font-bold sky-mono text-[color:var(--sky-fg)]">{current.precipProb}%</div>
+              </div>
+              <div className="flex-1 bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-xl px-2.5 py-2">
+                <div className="text-[9px] font-bold tracking-widest uppercase sky-mono text-[color:var(--sky-dim)] leading-none mb-1">Rate</div>
+                <div className="text-[13px] font-bold sky-mono text-[color:var(--sky-fg)]">{convertPrecipAccum(current.precipAccum ?? 0, settings.tempUnit)}</div>
+              </div>
+              <div className="flex-1 bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-xl px-2.5 py-2">
+                <div className="text-[9px] font-bold tracking-widest uppercase sky-mono text-[color:var(--sky-dim)] leading-none mb-1">Wind</div>
+                <div className="flex items-center gap-1 text-[13px] font-bold sky-mono text-[color:var(--sky-fg)]">
+                  <WindDirectionArrow deg={current.windSpeed <= 0 ? 0 : current.windDeg} size={10} transition />
+                  {convertWindSpeed(current.windSpeed, settings.windSpeedUnit)} {settings.windSpeedUnit}
+                </div>
+              </div>
+            </div>
+            {/* Row 2: humidity, sunrise, sunset */}
+            <div className="flex gap-2">
+              <div className="flex-1 bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-xl px-2.5 py-2">
+                <div className="text-[9px] font-bold tracking-widest uppercase sky-mono text-[color:var(--sky-dim)] leading-none mb-1">Humidity</div>
+                <div className="text-[13px] font-bold sky-mono text-[color:var(--sky-fg)]">{current.humidity}%</div>
+              </div>
+              {weatherData.daily[0] && (
+                <div className="flex-1 bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-xl px-2.5 py-2">
+                  <div className="text-[9px] font-bold tracking-widest uppercase sky-mono text-[color:var(--sky-dim)] leading-none mb-1">Sunrise</div>
+                  <div className="text-[13px] font-bold sky-mono text-[color:var(--sky-fg)]">
+                    {formatTimeAtLocation(weatherData.daily[0].sunriseTime, settings.clockFormat, tz)}
+                  </div>
+                </div>
+              )}
+              {weatherData.daily[0] && (
+                <div className="flex-1 bg-[color:var(--sky-card)] border border-[color:var(--sky-border)] rounded-xl px-2.5 py-2">
+                  <div className="text-[9px] font-bold tracking-widest uppercase sky-mono text-[color:var(--sky-dim)] leading-none mb-1">Sunset</div>
+                  <div className="text-[13px] font-bold sky-mono text-[color:var(--sky-fg)]">
+                    {formatTimeAtLocation(weatherData.daily[0].sunsetTime, settings.clockFormat, tz)}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
     </div>
   );

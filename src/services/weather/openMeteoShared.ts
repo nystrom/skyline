@@ -115,6 +115,16 @@ function parseOpenMeteoRawBundle(
 
   const firstDay = mergedDailyPoints[0];
 
+  // When the model reports a fair-weather code (0–3) but cloud_cover contradicts it,
+  // derive a more accurate code from cloud_cover. This corrects cases where the
+  // MeteoSwiss ICON model lags reality (e.g. shows "overcast" when cloud_cover is low).
+  const rawCode = coalesceNumber(current.weather_code, 0);
+  const cloudCover = coalesceNumber(current.cloud_cover, NaN);
+  const effectiveCode =
+    rawCode <= 3 && Number.isFinite(cloudCover)
+      ? cloudCover <= 20 ? 0 : cloudCover <= 50 ? 1 : cloudCover <= 80 ? 2 : 3
+      : rawCode;
+
   return {
     rawHourly,
     dailyPoints: mergedDailyPoints,
@@ -123,8 +133,8 @@ function parseOpenMeteoRawBundle(
     timeZoneOffsetMinutes,
     current: {
       temp: Math.round(coalesceNumber(current.temperature_2m)),
-      description: wmoToDesc(coalesceNumber(current.weather_code, 0)),
-      iconName: wmoToIcon(coalesceNumber(current.weather_code, 0), current.is_day === 1),
+      description: wmoToDesc(effectiveCode),
+      iconName: wmoToIcon(effectiveCode, current.is_day === 1),
       humidity: coalesceNumber(current.relative_humidity_2m, 60),
       windSpeed: coalesceNumber(current.wind_speed_10m),
       windDeg: coalesceNumber(current.wind_direction_10m),
