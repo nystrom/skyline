@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
-import type { WeatherData, UserSettings } from '../../types';
+import type { WeatherData, UserSettings, WeatherWarning } from '../../types';
 import { adaptWeatherData } from './weatherAdapter';
 import { HomeMinimal } from './HomeMinimal';
 import { HomeAtmospheric } from './HomeAtmospheric';
 import { HomeBold } from './HomeBold';
+import { HomeV4 } from './HomeV4';
 import type { DesignVariant } from './wxTypes';
 
 interface Props {
   weatherData: WeatherData;
   settings: UserSettings;
   design: DesignVariant;
+  onWarningTap?: (warnings: WeatherWarning[]) => void;
 }
 
-export function DesignView({ weatherData, settings, design }: Props) {
+export function DesignView({ weatherData, settings, design, onWarningTap }: Props) {
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -32,6 +34,15 @@ export function DesignView({ weatherData, settings, design }: Props) {
       return <HomeAtmospheric s={s} units={units} />;
     case 'bold':
       return <HomeBold s={s} units={units} precipUnit={precipUnit} windSpeedUnit={windSpeedUnit} />;
+    case 'v4':
+      return (
+        <HomeV4
+          s={s} units={units}
+          onSevereTap={onWarningTap
+            ? () => onWarningTap(weatherData.current.warnings ?? [])
+            : undefined}
+        />
+      );
   }
 }
 
@@ -41,6 +52,7 @@ interface ToggleProps {
 }
 
 const TABS: { key: DesignVariant | 'classic'; label: string }[] = [
+  { key: 'v4', label: 'V4' },
   { key: 'classic', label: 'Classic' },
   { key: 'minimal', label: 'Minimal' },
   { key: 'atmospheric', label: 'Atmo' },

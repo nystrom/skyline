@@ -320,7 +320,12 @@ export default function App() {
               className="flex-1 min-h-0 overflow-y-auto scrollbar-none relative z-10"
             >
               <div className="relative">
-                <DesignView weatherData={displayData} settings={settings} design="minimal" />
+                <DesignView
+  weatherData={displayData}
+  settings={settings}
+  design="v4"
+  onWarningTap={(ws) => setSelectedWarnings(ws)}
+/>
                 <div className="absolute top-0 left-0 right-0 z-50">
                   <WeatherHeader
                     weatherData={displayData}

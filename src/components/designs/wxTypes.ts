@@ -88,4 +88,4 @@ export interface WxScenario {
   daily: WxDayForecast[];
 }
 
-export type DesignVariant = 'minimal' | 'atmospheric' | 'bold';
+export type DesignVariant = 'minimal' | 'atmospheric' | 'bold' | 'v4';
