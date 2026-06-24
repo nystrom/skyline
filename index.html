@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Skyline</title>
+    <script>
+      (function () {
+        var t = localStorage.getItem('sky_timeline_theme') || 'system';
+        var e = t === 'light' ? 'light'
+              : t === 'dark'  ? 'dark'
+              : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        document.documentElement.dataset.theme = e;
+        if (e === 'dark') document.documentElement.classList.add('dark');
+      })();
+    </script>
+    <script type="module" crossorigin src="/skyline/assets/index-VrdXdvOS.js"></script>
+    <link rel="stylesheet" crossorigin href="/skyline/assets/index-D2jbbzWe.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
+
